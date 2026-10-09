@@ -19,12 +19,12 @@ for (const [address,expected] of [
 }
 const order = {id:1,numeroOS:1001,clienteNome:'CLIENTE TESTE',aparelho:'IPHONE',status:'EM ANÁLISE',itens:[],valor:'120.00',dataAbertura:'09/10/2026, 10:00',pagamento:'PIX'};
 const createQRImage = require('./whatsapp-qr');
-const fixtures = {'/clientes':[], '/os':[order], '/produtos':[], '/faturamento':{hoje:'120.00',semana:'240.00',mes:'900.00'},'/whatsapp/status':{status:'AGUARDANDO_LEITURA',qr:'simulated-whatsapp-session',qrImage:createQRImage('simulated-whatsapp-session')},'/caixa/status':{aberto:false},'/caixa/extrato':[]};
+const fixtures = {'/auth/me':{user:{id:'test',email:'owner@example.com',role:'owner',store:{id:'test',name:'Loja de teste'}},csrf:'mock-csrf'},'/whatsapp/connect':{success:true},'/clientes':[], '/os':[order], '/produtos':[], '/faturamento':{hoje:'120.00',semana:'240.00',mes:'900.00'},'/whatsapp/status':{status:'AGUARDANDO_LEITURA',qr:'simulated-whatsapp-session',qrImage:createQRImage('simulated-whatsapp-session')},'/caixa/status':{aberto:false},'/caixa/extrato':[]};
 const server = http.createServer((req,res) => {
     if (fixtures[req.url]) {res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixtures[req.url]));return;}
     const pathname = new URL(req.url,'http://localhost').pathname;
     const file = pathname === '/' ? 'index.html' : pathname.slice(1);
-    if (!['index.html','style.css','dashboard.css','oficina.css','dashboard.js','api-config.js','publicidade.json'].includes(file)) {res.writeHead(404);res.end();return;}
+    if (!['index.html','style.css','dashboard.css','oficina.css','dashboard.js','api-config.js','auth-client.js','account.css','publicidade.json'].includes(file)) {res.writeHead(404);res.end();return;}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(path.join(__dirname,file)));
 });
 (async()=>{

@@ -5,6 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "setup": "node setup-admin.js",
+    "test:tenant": "node tenant-check.cjs",
+    "test:auth": "node auth-check.cjs",
     "test:ui": "node ui-check.cjs"
   },
   "keywords": [],

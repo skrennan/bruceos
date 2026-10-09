@@ -93,6 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
         button.type = 'button';
     });
     document.querySelector('.topbar-actions').prepend(document.querySelector('.btn-tema'));
+    const whatsappBar = document.querySelector('.whatsapp-status-bar');
+    const whatsappActions = document.createElement('div');whatsappActions.className='whatsapp-actions';
+    const connectButton = whatsappBar.querySelector('button');connectButton.textContent='Conectar WhatsApp';whatsappActions.append(connectButton);
+    const disconnect = document.createElement('button');disconnect.type='button';disconnect.id='disconnectWhatsApp';disconnect.textContent='Desconectar';disconnect.disabled=true;
+    disconnect.addEventListener('click',async()=>{if(!confirm('Desconectar o WhatsApp desta loja? Será necessário escanear um novo QR Code.'))return;disconnect.disabled=true;try {const response=await fetch(API_URL+'/whatsapp/disconnect',{method:'POST'});if(!response.ok)throw Error('Não foi possível desconectar.');qrGeradoAnterior='';await verificarStatusWhatsApp();}catch(error){toast(error.message);disconnect.disabled=false;}});
+    whatsappActions.append(disconnect);whatsappBar.append(whatsappActions);
     document.getElementById('todayLabel').textContent = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(new Date());
     document.querySelectorAll('.fat-card').forEach((card, i) => {
         card.querySelector('h3').textContent = ['Hoje', 'Nesta semana', 'Neste mês'][i];

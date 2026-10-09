@@ -6,6 +6,8 @@
     <title>Bruce Cell - Sistema de OS & PDV</title>
     <link rel="stylesheet" href="style.css?v=20261009-5">
     <script src="api-config.js?v=20261009-5"></script>
+    <script src="auth-client.js?v=20261009-6"></script>
+    <link rel="stylesheet" href="account.css?v=20261009-6">
     <style>
         .abas-container {
             display: flex;
@@ -483,6 +485,7 @@
         let produtosPDV = [];
         let carrinhoPDV = [];
         let qrGeradoAnterior = '';
+        function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
 
         function forcarMaiusculas(input) {
             input.value = input.value.toUpperCase();
@@ -494,6 +497,8 @@
                 const data = await res.json();
                 const statusTexto = document.getElementById('statusZapTexto');
                 const modalSubtexto = document.getElementById('modalSubtexto');
+                const disconnectButton = document.getElementById('disconnectWhatsApp');
+                if (disconnectButton) disconnectButton.disabled = ['DESCONECTADO','ERRO_INICIALIZACAO','ERRO_AUTENTICACAO'].includes(data.status);
 
                 if (data.status === 'CONECTADO') {
                     statusTexto.textContent = 'CONECTADO ';
@@ -510,9 +515,12 @@
                         qrGeradoAnterior = data.qr;
                     }
                 } else {
-                    statusTexto.textContent = 'INICIALIZANDO... ';
-                    statusTexto.style.color = '#e65100';
-                    modalSubtexto.textContent = 'Gerando sessão no servidor...';
+                    const states = {DESCONECTADO:'Não conectado',INICIALIZANDO:'Iniciando conexão…',AUTENTICADO:'Autenticado · carregando…',ERRO_INICIALIZACAO:'Falha ao iniciar',ERRO_AUTENTICACAO:'Falha na autenticação'};
+                    statusTexto.textContent = states[data.status] || 'Aguardando conexão';
+                    statusTexto.style.color = '#a34520';
+                    modalSubtexto.textContent = data.status === 'DESCONECTADO' ? 'Clique em Conectar WhatsApp para gerar seu QR Code.' : statusTexto.textContent;
+                    qrGeradoAnterior = '';
+                    document.getElementById('qrcode-container').textContent = modalSubtexto.textContent;
                 }
             } catch (e) { document.getElementById('statusZapTexto').textContent = 'Servidor indisponível'; }
         }
@@ -532,9 +540,15 @@
             container.replaceChildren(image);
         }
 
-        function abrirModalQR() {
+        async function abrirModalQR() {
             document.getElementById('modalQR').style.display = 'flex';
-            verificarStatusWhatsApp();
+            document.getElementById('modalSubtexto').textContent = 'Preparando a conexão da sua loja…';
+            try {
+                const response = await fetch(`${API_URL}/whatsapp/connect`, {method:'POST'});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Falha ao iniciar conexão.');
+                await verificarStatusWhatsApp();
+            } catch (error) {document.getElementById('modalSubtexto').textContent = error.message;}
         }
 
         function abrirModalProduto() {
@@ -721,9 +735,9 @@
 
                     tbody.innerHTML += `
                         <tr>
-                            <td><small>${m.dataHora.split(',')[1] || m.dataHora}</small></td>
-                            <td><b>${m.tipo}</b></td>
-                            <td>${m.descricao}</td>
+                            <td><small>${escapeHTML(m.dataHora.split(',')[1] || m.dataHora)}</small></td>
+                            <td><b>${escapeHTML(m.tipo)}</b></td>
+                            <td>${escapeHTML(m.descricao)}</td>
                             <td style="text-align: right; color: ${corValor}; font-weight: bold;">${sinal} R$ ${m.valor.toFixed(2)}</td>
                         </tr>
                     `;
@@ -743,8 +757,8 @@
 
                 clientesData.forEach(c => {
                     const textoOpcao = `${c.nome} - ${c.aparelho} (${c.telefone})`;
-                    if (selectOS) selectOS.innerHTML += `<option value="${c.id}">${textoOpcao}</option>`;
-                    if (selectEditar) selectEditar.innerHTML += `<option value="${c.id}">${textoOpcao}</option>`;
+                    if (selectOS) selectOS.innerHTML += `<option value="${c.id}">${escapeHTML(textoOpcao)}</option>`;
+                    if (selectEditar) selectEditar.innerHTML += `<option value="${c.id}">${escapeHTML(textoOpcao)}</option>`;
                 });
             } catch (e) { console.error('Erro ao carregar clientes:', e); }
         }
@@ -757,8 +771,8 @@
             div.style.gap = '8px';
             div.style.marginBottom = '8px';
             div.innerHTML = `
-                <input type="text" placeholder="EX: TELA / MÃO DE OBRA" value="${descricao}" class="item-desc maiusculo" oninput="forcarMaiusculas(this)" required style="flex: 2; margin-bottom:0;">
-                <input type="text" placeholder="VALOR R$" value="${valor}" class="item-valor" required style="flex: 1; margin-bottom:0;">
+                <input type="text" placeholder="EX: TELA / MÃO DE OBRA" value="${escapeHTML(descricao)}" class="item-desc maiusculo" oninput="forcarMaiusculas(this)" required style="flex: 2; margin-bottom:0;">
+                <input type="text" placeholder="VALOR R$" value="${escapeHTML(valor)}" class="item-valor" required style="flex: 1; margin-bottom:0;">
                 <button type="button" class="btn-remover" aria-label="Remover item da ordem" onclick="removerLinhaItem(this)" style="background:#d9534f; color:white; border:none; padding:0 12px; border-radius:4px; cursor:pointer;">×</button>
             `;
             container.appendChild(div);
@@ -818,19 +832,19 @@
 
                 let itensHtml = '';
                 if (os.itens && Array.isArray(os.itens)) {
-                    itensHtml = os.itens.map(i => `• ${i.descricao}: <b>R$ ${i.valor}</b>`).join('<br>');
+                    itensHtml = os.itens.map(i => `• ${escapeHTML(i.descricao)}: <b>R$ ${escapeHTML(i.valor)}</b>`).join('<br>');
                 } else {
                     itensHtml = 'Nenhum item especificado';
                 }
 
-                let pagtoInfo = os.pagamento && os.pagamento !== 'NÃO DEFINIDO' ? `<br><small> Pagto: <b>${os.pagamento}</b></small>` : '';
+                let pagtoInfo = os.pagamento && os.pagamento !== 'NÃO DEFINIDO' ? `<br><small> Pagto: <b>${escapeHTML(os.pagamento)}</b></small>` : '';
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><b>#${os.numeroOS}</b><br><small>${os.dataAbertura.split(',')[0]}</small></td>
-                        <td>${os.clienteNome}<br><small>${os.aparelho}</small></td>
-                        <td>${itensHtml}${pagtoInfo}<br><hr style="margin:5px 0; border:0; border-top:1px solid #444;"><b>Total: R$ ${os.valor}</b></td>
-                        <td><span class="badge ${classeBadge}">${os.status}</span></td>
+                        <td><b>#${os.numeroOS}</b><br><small>${escapeHTML(os.dataAbertura.split(',')[0])}</small></td>
+                        <td>${escapeHTML(os.clienteNome)}<br><small>${escapeHTML(os.aparelho)}</small></td>
+                        <td>${itensHtml}${pagtoInfo}<br><hr style="margin:5px 0; border:0; border-top:1px solid #444;"><b>Total: R$ ${escapeHTML(os.valor)}</b></td>
+                        <td><span class="badge ${classeBadge}">${escapeHTML(os.status)}</span></td>
                         <td class="order-actions-cell">
                           <div class="order-actions">
                             <select aria-label="Alterar status da OS ${os.numeroOS}" onchange="mudarStatusComPagamento(${os.id}, this.value)">
@@ -876,7 +890,7 @@
 
             let itensHTML = '';
             if (os.itens && Array.isArray(os.itens)) {
-                itensHTML = os.itens.map(i => `<tr><td style="padding: 2px 0;">${i.descricao}</td><td style="text-align:right; padding: 2px 0;">R$ ${i.valor}</td></tr>`).join('');
+                itensHTML = os.itens.map(i => `<tr><td style="padding: 2px 0;">${escapeHTML(i.descricao)}</td><td style="text-align:right; padding: 2px 0;">R$ ${escapeHTML(i.valor)}</td></tr>`).join('');
             } else {
                 itensHTML = `<tr><td colspan="2">Nenhum item detalhado</td></tr>`;
             }
@@ -888,16 +902,16 @@
                 area.innerHTML = `
                     <div style="font-family: 'Courier New', Courier, monospace; width: 72mm; margin: 0 auto; font-size: 11px; color: #000; background: #fff; padding: 2mm;">
                         <div style="text-align: center;">
-                            <h3 style="margin: 0; font-size: 14px;">BRUCE CELL </h3>
+                            <h3 style="margin: 0; font-size: 14px;">${escapeHTML(window.currentAccount?.store.name || "Bruce Cell")}</h3>
                             <p style="margin: 2px 0; font-size: 9px;">Assistência Técnica Especializada</p>
-                            <p style="margin: 0 0 5px 0; font-size: 9px;">Açailândia - MA</p>
+                            <p style="margin: 0 0 5px 0; font-size: 9px;">${window.currentAccount?.store.id === "legacy" ? "Açailândia - MA" : ""}</p>
                         </div>
                         <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
                         <p style="margin: 2px 0;"><b>OS:</b> #${os.numeroOS}</p>
-                        <p style="margin: 2px 0;"><b>Data:</b> ${os.dataAbertura}</p>
-                        <p style="margin: 2px 0;"><b>Cliente:</b> ${os.clienteNome}</p>
-                        <p style="margin: 2px 0;"><b>Fone:</b> ${os.telefone}</p>
-                        <p style="margin: 2px 0;"><b>Aparelho:</b> ${os.aparelho}</p>
+                        <p style="margin: 2px 0;"><b>Data:</b> ${escapeHTML(os.dataAbertura)}</p>
+                        <p style="margin: 2px 0;"><b>Cliente:</b> ${escapeHTML(os.clienteNome)}</p>
+                        <p style="margin: 2px 0;"><b>Fone:</b> ${escapeHTML(os.telefone)}</p>
+                        <p style="margin: 2px 0;"><b>Aparelho:</b> ${escapeHTML(os.aparelho)}</p>
                         <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
                         <table style="width:100%; border-collapse: collapse; font-size: 11px;">
                             <thead>
@@ -912,10 +926,10 @@
                         </table>
                         <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
                         <div style="text-align: right; font-size: 13px; margin: 4px 0;">
-                            <b>TOTAL: R$ ${os.valor}</b>
+                            <b>TOTAL: R$ ${escapeHTML(os.valor)}</b>
                         </div>
-                        <p style="margin: 2px 0;"><b>Pagto:</b> ${os.pagamento || 'NÃO DEFINIDO'}</p>
-                        <p style="margin: 2px 0;"><b>Status:</b> ${os.status}</p>
+                        <p style="margin: 2px 0;"><b>Pagto:</b> ${escapeHTML(os.pagamento || 'NÃO DEFINIDO')}</p>
+                        <p style="margin: 2px 0;"><b>Status:</b> ${escapeHTML(os.status)}</p>
                         <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
                         <p style="font-size: 8px; text-align: justify; margin: 2px 0;">
                             Garantia de 90 dias sobre os serviços e peças descritas. Aparelhos não retirados em até 90 dias ficam sujeitos a taxa de guarda.
@@ -932,21 +946,21 @@
                     <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; font-size: 13px; color: #000; background: #fff; padding: 30px; border: 1px solid #ddd;">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #075e54; padding-bottom: 15px;">
                             <div>
-                                <h1 style="margin: 0; color: #075e54; font-size: 24px;">BRUCE CELL </h1>
+                                <h1 style="margin: 0; color: #075e54; font-size: 24px;">${escapeHTML(window.currentAccount?.store.name || "Bruce Cell")}</h1>
                                 <p style="margin: 4px 0 0 0; font-size: 12px; color: #555;">Assistência Técnica Especializada em Celulares e Eletrônicos</p>
-                                <p style="margin: 2px 0 0 0; font-size: 11px; color: #777;">Açailândia - MA</p>
+                                <p style="margin: 2px 0 0 0; font-size: 11px; color: #777;">${window.currentAccount?.store.id === "legacy" ? "Açailândia - MA" : ""}</p>
                             </div>
                             <div style="text-align: right;">
                                 <h2 style="margin: 0; color: #333; font-size: 18px;">ORDEM DE SERVIÇO</h2>
                                 <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #d9534f;">Nº #${os.numeroOS}</p>
-                                <p style="margin: 2px 0; font-size: 11px; color: #555;">Data: ${os.dataAbertura}</p>
+                                <p style="margin: 2px 0; font-size: 11px; color: #555;">Data: ${escapeHTML(os.dataAbertura)}</p>
                             </div>
                         </div>
 
                         <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #075e54;">
-                            <p style="margin: 5px 0;"><b>Nome do Cliente:</b> ${os.clienteNome}</p>
-                            <p style="margin: 5px 0;"><b>Telefone / WhatsApp:</b> ${os.telefone}</p>
-                            <p style="margin: 5px 0;"><b>Aparelho / Modelo:</b> ${os.aparelho}</p>
+                            <p style="margin: 5px 0;"><b>Nome do Cliente:</b> ${escapeHTML(os.clienteNome)}</p>
+                            <p style="margin: 5px 0;"><b>Telefone / WhatsApp:</b> ${escapeHTML(os.telefone)}</p>
+                            <p style="margin: 5px 0;"><b>Aparelho / Modelo:</b> ${escapeHTML(os.aparelho)}</p>
                         </div>
 
                         <h3 style="margin-top: 25px; color: #075e54; border-bottom: 1px solid #ccc; padding-bottom: 5px; font-size: 15px;">Discriminação de Produtos e Serviços</h3>
@@ -963,9 +977,9 @@
                         </table>
 
                         <div style="text-align: right; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd;">
-                            <p style="margin: 5px 0; font-size: 14px;"><b>Forma de Pagamento:</b> ${os.pagamento || 'NÃO DEFINIDO'}</p>
-                            <p style="margin: 5px 0; font-size: 22px; color: #075e54;"><b>VALOR TOTAL: R$ ${os.valor}</b></p>
-                            <p style="margin: 5px 0; font-size: 12px; color: #666;">Status atual da OS: <b>${os.status}</b></p>
+                            <p style="margin: 5px 0; font-size: 14px;"><b>Forma de Pagamento:</b> ${escapeHTML(os.pagamento || 'NÃO DEFINIDO')}</p>
+                            <p style="margin: 5px 0; font-size: 22px; color: #075e54;"><b>VALOR TOTAL: R$ ${escapeHTML(os.valor)}</b></p>
+                            <p style="margin: 5px 0; font-size: 12px; color: #666;">Status atual da OS: <b>${escapeHTML(os.status)}</b></p>
                         </div>
 
                         <div style="margin-top: 40px; border-top: 1px dashed #999; padding-top: 12px; font-size: 10px; text-align: justify; color: #444; line-height: 1.4;">
@@ -977,7 +991,7 @@
                         <div style="margin-top: 60px; display: flex; justify-content: space-around; text-align: center;">
                             <div>
                                 _________________________________________<br>
-                                <span style="font-size: 11px; color: #555;">Assinatura da Loja (Bruce Cell)</span>
+                                <span style="font-size: 11px; color: #555;">Assinatura da Loja</span>
                             </div>
                             <div>
                                 _________________________________________<br>
@@ -1031,7 +1045,7 @@
             const select = document.getElementById('selectProdutoEstoque');
             select.innerHTML = '<option value="">-- Selecione o produto --</option>';
             produtosPDV.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">${p.nome} (Estoque: ${p.estoque})</option>`;
+                select.innerHTML += `<option value="${p.id}">${escapeHTML(p.nome)} (Estoque: ${p.estoque})</option>`;
             });
         }
 
@@ -1076,7 +1090,7 @@
             const select = document.getElementById('selectProdutoPDV');
             select.innerHTML = '<option value="">-- Selecione o produto para vender --</option>';
             produtosPDV.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">${p.nome} - R$ ${p.preco.toFixed(2)} (Estoque: ${p.estoque})</option>`;
+                select.innerHTML += `<option value="${p.id}">${escapeHTML(p.nome)} - R$ ${p.preco.toFixed(2)} (Estoque: ${p.estoque})</option>`;
             });
         }
 
@@ -1090,8 +1104,8 @@
             }
             lista.innerHTML = '';
             dadosParaExibir.forEach(p => {
-                let ncmTxt = p.ncm ? ` | NCM: ${p.ncm}` : '';
-                lista.innerHTML += `<li style="padding:4px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${p.nome} (<b>${p.estoque} un</b>${ncmTxt})</span> <b>R$ ${p.preco.toFixed(2)}</b></li>`;
+                let ncmTxt = p.ncm ? ` | NCM: ${escapeHTML(p.ncm)}` : '';
+                lista.innerHTML += `<li style="padding:4px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${escapeHTML(p.nome)} (<b>${p.estoque} un</b>${escapeHTML(ncmTxt)})</span> <b>R$ ${p.preco.toFixed(2)}</b></li>`;
             });
         }
 
@@ -1146,7 +1160,7 @@
 
                 tbody.innerHTML += `
                     <tr>
-                        <td style="padding:8px; font-size:12px;">${item.nome}</td>
+                        <td style="padding:8px; font-size:12px;">${escapeHTML(item.nome)}</td>
                         <td style="padding:8px; text-align:center; font-size:12px;">${item.quantidade}</td>
                         <td style="padding:8px; text-align:right; font-size:12px;">R$ ${subtotal.toFixed(2)}</td>
                         <td style="padding:8px; text-align:center;"><button type="button" aria-label="Remover produto do carrinho" onclick="removerItemCarrinho(${index})" style="background:#d9534f; padding:4px 8px; margin:0; font-size:16px;">×</button></td>
@@ -1207,7 +1221,7 @@
 
         function imprimirComprovanteVenda(itens, total, formaPagamento) {
             const dataHora = new Date().toLocaleString();
-            let itensHTML = itens.map(i => `<tr><td style="padding: 2px 0;">${i.quantidade}x ${i.nome}</td><td style="text-align:right; padding: 2px 0;">R$ ${(i.preco * i.quantidade).toFixed(2)}</td></tr>`).join('');
+            let itensHTML = itens.map(i => `<tr><td style="padding: 2px 0;">${i.quantidade}x ${escapeHTML(i.nome)}</td><td style="text-align:right; padding: 2px 0;">R$ ${(i.preco * i.quantidade).toFixed(2)}</td></tr>`).join('');
 
             const area = document.getElementById('areaImpressao');
             area.style.display = 'block';
@@ -1215,9 +1229,9 @@
             area.innerHTML = `
                 <div style="font-family: 'Courier New', Courier, monospace; width: 72mm; margin: 0 auto; font-size: 11px; color: #000; background: #fff; padding: 2mm;">
                     <div style="text-align: center;">
-                        <h3 style="margin: 0; font-size: 14px;">BRUCE CELL </h3>
+                        <h3 style="margin: 0; font-size: 14px;">${escapeHTML(window.currentAccount?.store.name || "Bruce Cell")}</h3>
                         <p style="margin: 2px 0; font-size: 9px;">Comprovante de Venda / Acessórios</p>
-                        <p style="margin: 0 0 5px 0; font-size: 9px;">Açailândia - MA</p>
+                        <p style="margin: 0 0 5px 0; font-size: 9px;">${window.currentAccount?.store.id === "legacy" ? "Açailândia - MA" : ""}</p>
                     </div>
                     <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
                     <p style="margin: 2px 0;"><b>Data:</b> ${dataHora}</p>
@@ -1408,14 +1422,14 @@
                 concluidos.reverse().forEach(o => {
                     let itensTxt = '';
                     if(o.itens && Array.isArray(o.itens)) {
-                        itensTxt = o.itens.map(i => `${i.descricao} (R$ ${i.valor})`).join(', ');
+                        itensTxt = o.itens.map(i => `${escapeHTML(i.descricao)} (R$ ${escapeHTML(i.valor)})`).join(', ');
                     }
                     tbody.innerHTML += `
                         <tr>
-                            <td><b>#${o.numeroOS}</b><br><small>${o.dataAbertura}</small></td>
-                            <td>${o.clienteNome} - <small>${o.aparelho}</small><br><span style="font-size:11px; color:#555;">${itensTxt}</span></td>
-                            <td>${o.pagamento || 'PIX'}</td>
-                            <td><b>R$ ${o.valor}</b></td>
+                            <td><b>#${o.numeroOS}</b><br><small>${escapeHTML(o.dataAbertura)}</small></td>
+                            <td>${escapeHTML(o.clienteNome)} - <small>${escapeHTML(o.aparelho)}</small><br><span style="font-size:11px; color:#555;">${escapeHTML(itensTxt)}</span></td>
+                            <td>${escapeHTML(o.pagamento || 'PIX')}</td>
+                            <td><b>R$ ${escapeHTML(o.valor)}</b></td>
                         </tr>
                     `;
                 });

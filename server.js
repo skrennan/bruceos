@@ -1,170 +1,70 @@
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const cors = require('cors');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const createQRImage = require('./whatsapp-qr');
+const express=require('express');
+const path=require('path');
+const {createAccounts}=require('./accounts');
+const {openStore,close}=require('./database');
+const {createWhatsAppSessions}=require('./whatsapp-sessions');
+const {installAuth}=require('./auth-routes');
 
-const path = require('path');
-const app = express();
-// Serve only public assets; never expose the database or WhatsApp sessions.
-const sendPublicFile = (res, file) => {
-    res.set('Cache-Control', 'no-store');
-    res.sendFile(path.join(__dirname, file));
-};
-app.get('/', (req, res) => sendPublicFile(res, 'index.html'));
-app.get('/index.html', (req, res) => sendPublicFile(res, 'index.html'));
-for (const asset of ['style.css', 'dashboard.css', 'oficina.css', 'dashboard.js', 'api-config.js', 'publicidade.json']) {
-    app.get('/' + asset, (req, res) => sendPublicFile(res, asset));
-}
-app.use(express.json());
-app.use(cors());
-
-let qrCodeAtual = '';
-let qrImagemAtual = '';
-let statusConexaoWhatsApp = 'DESCONECTADO';
-
-// --- CONFIGURAÇÃO DO BANCO DE DADOS SQLITE ---
-const db = new sqlite3.Database(path.join(__dirname, 'brucecell.db'), (err) => {
-    if (err) {
-        console.error('Erro ao abrir o banco de dados SQLite:', err.message);
-    } else {
-        console.log('📦 Conectado ao banco de dados SQLite com sucesso!');
-        criarTabelas();
-    }
-});
-
-function criarTabelas() {
-    db.serialize(() => {
-        db.run(`CREATE TABLE IF NOT EXISTS clientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            telefone TEXT NOT NULL,
-            aparelho TEXT NOT NULL
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS ordens_servico (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            numeroOS INTEGER UNIQUE NOT NULL,
-            clienteId INTEGER,
-            clienteNome TEXT NOT NULL,
-            telefone TEXT NOT NULL,
-            aparelho TEXT NOT NULL,
-            itens TEXT NOT NULL,
-            valor REAL NOT NULL,
-            status TEXT DEFAULT 'EM ANÁLISE',
-            pagamento TEXT DEFAULT 'NÃO DEFINIDO',
-            dataAbertura TEXT NOT NULL,
-            FOREIGN KEY (clienteId) REFERENCES clientes (id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            preco REAL NOT NULL,
-            estoque INTEGER NOT NULL,
-            ncm TEXT DEFAULT ''
-        )`, (err) => {
-            if (!err) {
-                db.run(`ALTER TABLE produtos ADD COLUMN ncm TEXT DEFAULT ''`, () => {});
-            }
-        });
-
-        db.run(`CREATE TABLE IF NOT EXISTS caixa_movimentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL, 
-            valor REAL NOT NULL,
-            formaPagamento TEXT DEFAULT 'DINHEIRO',
-            descricao TEXT NOT NULL,
-            dataHora TEXT NOT NULL,
-            statusCaixa TEXT DEFAULT 'ABERTO'
-        )`);
-    });
-}
-
-// --- CONFIGURAÇÃO ESTÁVEL DO WHATSAPP ---
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
-        ]
-    }
-});
-
-client.on('qr', (qr) => {
-    console.log('📱 QR CODE GERADO COM SUCESSO! Pronto para leitura no painel.');
-    qrCodeAtual = qr;
-    qrImagemAtual = createQRImage(qr);
-    statusConexaoWhatsApp = 'AGUARDANDO_LEITURA';
-});
-
-client.on('ready', () => {
-    console.log('✅ WhatsApp conectado com sucesso!');
-    qrCodeAtual = '';
-    statusConexaoWhatsApp = 'CONECTADO';
-});
-
-client.on('authenticated', () => {
-    console.log('🔑 WhatsApp autenticado com sucesso!');
-    statusConexaoWhatsApp = 'AUTENTICADO';
-});
-
-client.on('disconnected', (reason) => {
-    console.log('⚠️ WhatsApp desconectado:', reason);
-    statusConexaoWhatsApp = 'DESCONECTADO';
-    qrCodeAtual = '';
-});
-
-client.initialize().catch(err => {
-    console.log('❌ Erro na inicialização do WhatsApp:', err.message);
-    statusConexaoWhatsApp = 'ERRO_INICIALIZACAO';
-});
-
-function obterDataAtual() {
-    const agora = new Date();
-    return agora.toLocaleString('pt-BR');
-}
-
-async function enviarMensagemSegura(telefone, mensagem) {
-    if (statusConexaoWhatsApp !== 'CONECTADO') {
-        throw new Error('WhatsApp não está conectado.');
-    }
-    let numeroLimpo = telefone.replace(/\D/g, '');
-    let chatId = `55${numeroLimpo}@c.us`;
-
-    try {
-        await client.sendMessage(chatId, mensagem);
-    } catch (e) {
-        let contactId = await client.getNumberId(chatId);
-        if (contactId && contactId._serialized) {
-            await client.sendMessage(contactId._serialized, mensagem);
-        } else {
-            throw new Error('Número de WhatsApp inválido ou não encontrado.');
+async function createApp(options={}) {
+    const app=express();
+    app.disable('x-powered-by');
+    if(process.env.TRUST_PROXY==='1')app.set('trust proxy',1);
+    const dataDir=options.dataDir||process.env.DATA_DIR||path.join(__dirname,'data');
+    const legacyDbPath=options.legacyDbPath||path.join(__dirname,'brucecell.db');
+    const accounts=await createAccounts(path.join(dataDir,'accounts.sqlite'));
+    const whatsapp=createWhatsAppSessions({authDir:path.join(dataDir,'whatsapp'),legacyAuthDir:path.join(__dirname,'.wwebjs_auth'),clientFactory:options.clientFactory});
+    const databases=new Map();
+    const writeQueues=new Map();
+    app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'DENY'});next();});
+    const publicAssets=['index.html','style.css','dashboard.css','oficina.css','dashboard.js','api-config.js','auth-client.js','login.html','login.js','account.css','admin.html','admin.js','account.html','account.js','publicidade.json'];
+    const publicFile=(file)=>(req,res)=>{res.set('Cache-Control','no-store');res.sendFile(path.join(__dirname,file));};
+    app.get('/',publicFile('index.html'));
+    for(const asset of publicAssets)app.get('/'+asset,publicFile(asset));
+    app.use(express.json({limit:'128kb'}));
+    installAuth(app,{accounts,whatsapp,production:process.env.NODE_ENV==='production',allowedOrigins:(process.env.ALLOWED_ORIGINS||'').split(',').map(value=>value.trim()).filter(Boolean)});
+    app.use(async(req,res,next)=>{
+        const storeId=req.user.storeId;
+        if(!databases.has(storeId))databases.set(storeId,openStore(storeId==='legacy'?legacyDbPath:path.join(dataDir,'stores',storeId,'store.sqlite')));
+        req.db=await databases.get(storeId);
+        req.wa=whatsapp.state(storeId);
+        // Serialize writes inside each store, including OS numbering and stock changes.
+        if(!['GET','HEAD','OPTIONS'].includes(req.method)) {
+            const previous=writeQueues.get(storeId)||Promise.resolve();
+            let release;const current=new Promise(resolve=>{release=resolve;});
+            writeQueues.set(storeId,current);
+            await previous;
+            let done=false;const finish=()=>{if(done)return;done=true;release();if(writeQueues.get(storeId)===current)writeQueues.delete(storeId);};
+            res.once('finish',finish);res.once('close',finish);
+            if(res.destroyed){finish();return;}
         }
-    }
-}
-
+        next();
+    });
+    function obterDataAtual(){return new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});}
+    const validText=(value,max=200)=>typeof value==='string' && value.trim().length>0 && value.length<=max;
+    const validMoney=value=>['number','string'].includes(typeof value) && String(value).trim()!=='' && Number.isFinite(Number(value)) && Number(value)>=0 && Number(value)<=10000000;
+    app.use((req,res,next)=>{
+        const body=req.body||{};
+        let valid=true;
+        if((req.method==='POST'&&req.path==='/clientes')||(req.method==='PUT'&&/^\/clientes\/\d+$/.test(req.path)))valid=validText(body.nome)&&validText(body.telefone,30)&&validText(body.aparelho);
+        if(req.method==='POST'&&req.path==='/produtos')valid=validText(body.nome)&&validMoney(body.preco)&&Number.isSafeInteger(Number(body.estoque))&&Number(body.estoque)>=0;
+        if(req.method==='PUT'&&/^\/produtos\/\d+\/estoque$/.test(req.path))valid=Number.isSafeInteger(Number(body.adicionarEstoque))&&(body.preco===undefined||validMoney(body.preco));
+        if(req.method==='POST'&&req.path==='/os')valid=Array.isArray(body.itens)&&body.itens.length>0&&body.itens.length<=100&&body.itens.every(item=>item&&validText(item.descricao,500)&&validMoney(item.valor))&&(!body.clienteId||(Number.isSafeInteger(Number(body.clienteId))&&Number(body.clienteId)>0));
+        if(req.method==='PUT'&&/^\/os\/\d+\/status$/.test(req.path))valid=['EM ANÁLISE','EM REPARO','PRONTO','ENTREGUE'].includes(body.status)&&(!body.pagamento||validText(body.pagamento,100));
+        if(req.method==='POST'&&req.path==='/caixa/abrir')valid=validMoney(body.valorInicial);
+        if(req.method==='POST'&&req.path==='/caixa/movimentar')valid=['SUPRIMENTO','SANGRIA','VENDA'].includes(body.tipo)&&validMoney(body.valor)&&Number(body.valor)>0&&validText(body.descricao,500);
+        if(req.method==='POST'&&req.path==='/caixa/fechar')valid=validMoney(body.valorFechamento);
+        if(req.method==='POST'&&req.path==='/enviar-mensagem')valid=validText(body.telefone,30)&&validText(body.mensagem,10000);
+        if(!valid)return res.status(400).json({success:false,error:'Confira os campos e os valores informados.'});
+        next();
+    });
 // --- ROTAS DA API ---
 
-app.get('/whatsapp/status', (req, res) => {
-    res.set('Cache-Control', 'no-store');
-    res.json({
-        status: statusConexaoWhatsApp,
-        qr: qrCodeAtual,
-        qrImage: qrCodeAtual ? qrImagemAtual : ''
-    });
-});
+app.get('/whatsapp/status', (req,res) => {const {status,qr,qrImage}=req.wa;res.json({status,qr,qrImage});});
+app.post('/whatsapp/connect', (req,res) => {try {const {status}=whatsapp.connect(req.user.storeId);res.json({success:true,status});}catch(error){res.status(503).json({error:'Não foi possível iniciar a conexão desta loja.'});}});
+app.post('/whatsapp/disconnect', async(req,res) => {await whatsapp.disconnect(req.user.storeId);res.json({success:true});});
 
 app.get('/clientes', (req, res) => {
-    db.all(`SELECT * FROM clientes`, [], (err, rows) => {
+    req.db.all(`SELECT * FROM clientes`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -177,7 +77,7 @@ app.post('/clientes', (req, res) => {
     }
 
     const query = `INSERT INTO clientes (nome, telefone, aparelho) VALUES (?, ?, ?)`;
-    db.run(query, [nome, telefone, aparelho], function(err) {
+    req.db.run(query, [nome, telefone, aparelho], function(err) {
         if (err) {
             console.error('Erro ao cadastrar cliente:', err.message);
             return res.status(500).json({ success: false, error: err.message });
@@ -191,14 +91,15 @@ app.put('/clientes/:id', (req, res) => {
     const { nome, telefone, aparelho } = req.body;
 
     const query = `UPDATE clientes SET nome = ?, telefone = ?, aparelho = ? WHERE id = ?`;
-    db.run(query, [nome, telefone, aparelho, id], function(err) {
+    req.db.run(query, [nome, telefone, aparelho, id], function(err) {
         if (err) return res.status(500).json({ success: false, error: err.message });
+        if (!this.changes) return res.status(404).json({error:'Cliente não encontrado nesta loja.'});
         res.json({ success: true });
     });
 });
 
 app.get('/produtos', (req, res) => {
-    db.all(`SELECT * FROM produtos`, [], (err, rows) => {
+    req.db.all(`SELECT * FROM produtos`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -210,7 +111,7 @@ app.post('/produtos', (req, res) => {
         return res.status(400).json({ success: false, error: 'Preencha os campos obrigatórios.' });
     }
     const query = `INSERT INTO produtos (nome, preco, estoque, ncm) VALUES (?, ?, ?, ?)`;
-    db.run(query, [nome, preco, estoque, ncm || ''], function(err) {
+    req.db.run(query, [nome, preco, estoque, ncm || ''], function(err) {
         if (err) {
             console.error('Erro ao cadastrar produto:', err.message);
             return res.status(500).json({ success: false, error: err.message });
@@ -223,15 +124,16 @@ app.put('/produtos/:id/estoque', (req, res) => {
     const { id } = req.params;
     const { adicionarEstoque, ncm, preco } = req.body;
 
-    db.get(`SELECT * FROM produtos WHERE id = ?`, [id], (err, prod) => {
+    req.db.get(`SELECT * FROM produtos WHERE id = ?`, [id], (err, prod) => {
         if (err || !prod) return res.status(404).json({ success: false, error: 'Produto não encontrado.' });
 
         const novoEstoque = prod.estoque + (parseInt(adicionarEstoque) || 0);
+        if (novoEstoque < 0) return res.status(400).json({success:false,error:'Estoque insuficiente nesta loja.'});
         const novoNcm = ncm !== undefined ? ncm : prod.ncm;
         const novoPreco = preco !== undefined ? parseFloat(preco) : prod.preco;
 
         const updateQuery = `UPDATE produtos SET estoque = ?, ncm = ?, preco = ? WHERE id = ?`;
-        db.run(updateQuery, [novoEstoque, novoNcm, novoPreco, id], function(err) {
+        req.db.run(updateQuery, [novoEstoque, novoNcm, novoPreco, id], function(err) {
             if (err) return res.status(500).json({ success: false, error: err.message });
             res.json({ success: true });
         });
@@ -239,7 +141,7 @@ app.put('/produtos/:id/estoque', (req, res) => {
 });
 
 app.get('/os', (req, res) => {
-    db.all(`SELECT * FROM ordens_servico`, [], (err, rows) => {
+    req.db.all(`SELECT * FROM ordens_servico`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const osFormatadas = rows.map(os => ({
             ...os,
@@ -266,12 +168,12 @@ app.post('/os', (req, res) => {
         const itensJson = JSON.stringify(itens);
         const dataAbertura = obterDataAtual();
 
-        db.get(`SELECT MAX(numeroOS) as maxNum FROM ordens_servico`, [], (err, row) => {
+        req.db.get(`SELECT MAX(numeroOS) as maxNum FROM ordens_servico`, [], (err, row) => {
             const numeroOS = (row && row.maxNum) ? row.maxNum + 1 : 1001;
 
             const insertQuery = `INSERT INTO ordens_servico (numeroOS, clienteId, clienteNome, telefone, aparelho, itens, valor, status, pagamento, dataAbertura) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
             
-            db.run(insertQuery, [numeroOS, clienteId || null, clienteNome, telefone, aparelho, itensJson, valorTotal.toFixed(2), statusInicial, formaPagamento, dataAbertura], function(err) {
+            req.db.run(insertQuery, [numeroOS, clienteId || null, clienteNome, telefone, aparelho, itensJson, valorTotal.toFixed(2), statusInicial, formaPagamento, dataAbertura], function(err) {
                 if (err) {
                     console.error('Erro ao inserir OS no banco:', err.message);
                     return res.status(500).json({ success: false, error: err.message });
@@ -279,18 +181,19 @@ app.post('/os', (req, res) => {
 
                 res.json({ success: true, numeroOS });
 
-                if (telefone && telefone.length >= 8 && statusConexaoWhatsApp === 'CONECTADO' && clienteId) {
+                if (telefone && telefone.length >= 8 && req.wa.status === 'CONECTADO' && clienteId) {
                     let itensTexto = itens.map(i => `• ${i.descricao}: R$ ${i.valor}`).join('\n');
-                    let mensagem = `*BRUCE CELL 🦇*\n\nOlá *${clienteNome}*, sua Ordem de Serviço *#${numeroOS}* foi aberta!\n\n*Aparelho:* ${aparelho}\n*Itens/Serviços:*\n${itensTexto}\n\n*TOTAL: R$ ${valorTotal.toFixed(2)}*\n\nAcompanhe o andamento conosco!`;
+                    let mensagem = `*${req.user.name}*\n\nOlá *${clienteNome}*, sua Ordem de Serviço *#${numeroOS}* foi aberta!\n\n*Aparelho:* ${aparelho}\n*Itens/Serviços:*\n${itensTexto}\n\n*TOTAL: R$ ${valorTotal.toFixed(2)}*\n\nAcompanhe o andamento conosco!`;
                     
-                    enviarMensagemSegura(telefone, mensagem).catch(e => console.log('Erro WhatsApp OS (Background):', e.message));
+                    whatsapp.send(req.user.storeId, telefone, mensagem).catch(e => console.log('Erro WhatsApp OS (Background):', e.message));
                 }
             });
         });
     };
 
     if (clienteId) {
-        db.get(`SELECT * FROM clientes WHERE id = ?`, [clienteId], (err, cliente) => {
+        req.db.get(`SELECT * FROM clientes WHERE id = ?`, [clienteId], (err, cliente) => {
+            if (err || !cliente) return res.status(404).json({error:"Cliente não encontrado nesta loja."});
             if (cliente) {
                 clienteNome = cliente.nome;
                 telefone = cliente.telefone;
@@ -318,14 +221,15 @@ app.put('/os/:id/status', (req, res) => {
     query += ` WHERE id = ?`;
     params.push(id);
 
-    db.run(query, params, function(err) {
+    req.db.run(query, params, function(err) {
         if (err) return res.status(500).json({ success: false, error: err.message });
 
-        if (status === 'PRONTO' && statusConexaoWhatsApp === 'CONECTADO') {
-            db.get(`SELECT * FROM ordens_servico WHERE id = ?`, [id], (err, os) => {
+        if (!this.changes) return res.status(404).json({error:'Ordem não encontrada.'});
+        if (status === 'PRONTO' && req.wa.status === 'CONECTADO') {
+            req.db.get(`SELECT * FROM ordens_servico WHERE id = ?`, [id], (err, os) => {
                 if (os && os.telefone) {
-                    let mensagem = `*BRUCE CELL 🦇*\n\nOlá *${os.clienteNome}*, seu *${os.aparelho}* está *PRONTO*! 🚀\n\n*Valor Total:* R$ ${os.valor}\n*Forma de Pagto:* ${os.pagamento || 'NÃO DEFINIDO'}\n\nPode vir retirar na loja!`;
-                    enviarMensagemSegura(os.telefone, mensagem).catch(e => console.log('Erro WhatsApp:', e.message));
+                    let mensagem = `*${req.user.name}*\n\nOlá *${os.clienteNome}*, seu *${os.aparelho}* está *PRONTO*! 🚀\n\n*Valor Total:* R$ ${os.valor}\n*Forma de Pagto:* ${os.pagamento || 'NÃO DEFINIDO'}\n\nPode vir retirar na loja!`;
+                    whatsapp.send(req.user.storeId, os.telefone, mensagem).catch(e => console.log('Erro WhatsApp:', e.message));
                 }
             });
         }
@@ -337,20 +241,20 @@ app.put('/os/:id/status', (req, res) => {
 // --- ROTAS DE FLUXO DE CAIXA ---
 
 app.get('/caixa/status', (req, res) => {
-    db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'ABERTURA' ORDER BY id DESC LIMIT 1`, [], (err, abertura) => {
+    req.db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'ABERTURA' ORDER BY id DESC LIMIT 1`, [], (err, abertura) => {
         if (err) return res.status(500).json({ error: err.message });
         
         if (!abertura) {
             return res.json({ aberto: false, saldoInicial: 0 });
         }
 
-        db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'FECHAMENTO' AND id > ? ORDER BY id DESC LIMIT 1`, [abertura.id], (err, fechamento) => {
+        req.db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'FECHAMENTO' AND id > ? ORDER BY id DESC LIMIT 1`, [abertura.id], (err, fechamento) => {
             if (err) return res.status(500).json({ error: err.message });
 
             if (fechamento) {
                 res.json({ aberto: false, saldoInicial: 0 });
             } else {
-                db.all(`SELECT tipo, valor FROM caixa_movimentos WHERE id >= ?`, [abertura.id], (err, movimentos) => {
+                req.db.all(`SELECT tipo, valor FROM caixa_movimentos WHERE id >= ?`, [abertura.id], (err, movimentos) => {
                     if (err) return res.status(500).json({ error: err.message });
 
                     let saldoCalculado = 0;
@@ -384,7 +288,7 @@ app.post('/caixa/abrir', (req, res) => {
     const dataHora = obterDataAtual();
     const query = `INSERT INTO caixa_movimentos (tipo, valor, descricao, dataHora) VALUES ('ABERTURA', ?, 'Abertura de Caixa', ?)`;
     
-    db.run(query, [parseFloat(valorInicial), dataHora], function(err) {
+    req.db.run(query, [parseFloat(valorInicial), dataHora], function(err) {
         if (err) return res.status(500).json({ success: false, error: err.message });
         res.json({ success: true, id: this.lastID });
     });
@@ -399,7 +303,7 @@ app.post('/caixa/movimentar', (req, res) => {
     const dataHora = obterDataAtual();
     const query = `INSERT INTO caixa_movimentos (tipo, valor, descricao, dataHora) VALUES (?, ?, ?, ?)`;
 
-    db.run(query, [tipo.toUpperCase(), parseFloat(valor), descricao.toUpperCase(), dataHora], function(err) {
+    req.db.run(query, [tipo.toUpperCase(), parseFloat(valor), descricao.toUpperCase(), dataHora], function(err) {
         if (err) return res.status(500).json({ success: false, error: err.message });
         res.json({ success: true });
     });
@@ -410,17 +314,17 @@ app.post('/caixa/fechar', (req, res) => {
     const dataHora = obterDataAtual();
 
     const query = `INSERT INTO caixa_movimentos (tipo, valor, descricao, dataHora) VALUES ('FECHAMENTO', ?, ?, ?)`;
-    db.run(query, [parseFloat(valorFechamento) || 0, `FECHAMENTO: ${observacao || 'NENHUMA'}`, dataHora], function(err) {
+    req.db.run(query, [parseFloat(valorFechamento) || 0, `FECHAMENTO: ${observacao || 'NENHUMA'}`, dataHora], function(err) {
         if (err) return res.status(500).json({ success: false, error: err.message });
         res.json({ success: true });
     });
 });
 
 app.get('/caixa/extrato', (req, res) => {
-    db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'ABERTURA' ORDER BY id DESC LIMIT 1`, [], (err, abertura) => {
+    req.db.get(`SELECT * FROM caixa_movimentos WHERE tipo = 'ABERTURA' ORDER BY id DESC LIMIT 1`, [], (err, abertura) => {
         if (err || !abertura) return res.json([]);
 
-        db.all(`SELECT * FROM caixa_movimentos WHERE id >= ? ORDER BY id DESC`, [abertura.id], (err, rows) => {
+        req.db.all(`SELECT * FROM caixa_movimentos WHERE id >= ? ORDER BY id DESC`, [abertura.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -434,7 +338,7 @@ app.post('/enviar-mensagem', async (req, res) => {
     }
 
     try {
-        await enviarMensagemSegura(telefone, mensagem);
+        await whatsapp.send(req.user.storeId, telefone, mensagem);
         res.json({ success: true });
     } catch (e) {
         console.error('Erro ao enviar mensagem livre:', e.message);
@@ -443,7 +347,7 @@ app.post('/enviar-mensagem', async (req, res) => {
 });
 
 app.get('/faturamento', (req, res) => {
-    db.all(`SELECT valor, dataAbertura FROM ordens_servico WHERE status IN ('PRONTO', 'ENTREGUE')`, [], (err, rows) => {
+    req.db.all(`SELECT valor, dataAbertura FROM ordens_servico WHERE status IN ('PRONTO', 'ENTREGUE')`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
         let hojeTotal = 0;
@@ -482,7 +386,15 @@ app.get('/faturamento', (req, res) => {
     });
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando localmente na porta ${PORT}`);
-});
+
+    app.use((error,req,res,next)=>{console.error('Falha na API:',error.message);if(!res.headersSent)res.status(error.status||500).json({error:'Não foi possível concluir a operação.'});});
+    return {app,accounts,whatsapp,async close(){await whatsapp.close();await Promise.all([...databases.values()].map(async value=>close(await value)));await accounts.close();}};
+}
+if(require.main===module)createApp().then(async service=>{
+    if(!await service.accounts.initialized())console.log('Execute npm run setup para criar o administrador antes do primeiro acesso.');
+    const port=Number(process.env.PORT)||3000;
+    const server=service.app.listen(port,()=>console.log('Servidor disponível na porta '+port));
+    async function shutdown(){server.close();try{await service.close();}finally{process.exit(0);}}
+    process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
+}).catch(error=>{console.error('Não foi possível iniciar o servidor:',error.message);process.exitCode=1;});
+module.exports={createApp};
