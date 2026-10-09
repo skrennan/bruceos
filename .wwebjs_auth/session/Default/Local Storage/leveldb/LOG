@@ -1,0 +1,9 @@
+2026/10/09-11:40:25.010 2298 Reusing MANIFEST C:\Users\SUPORTE INFORSYS\Documents\APIWHATSAPP\whatsapp-api\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/10/09-11:40:25.013 2298 Recovering log #3
+2026/10/09-11:40:25.015 2298 Reusing old log C:\Users\SUPORTE INFORSYS\Documents\APIWHATSAPP\whatsapp-api\.wwebjs_auth\session\Default\Local Storage\leveldb/000003.log 
+2026/10/09-12:57:01.129 382c Level-0 table #5: started
+2026/10/09-12:57:01.137 382c Level-0 table #5: 21504 bytes OK
+2026/10/09-12:57:01.140 382c Delete type=0 #3
+2026/10/09-14:37:04.363 382c Level-0 table #7: started
+2026/10/09-14:37:04.375 382c Level-0 table #7: 17070 bytes OK
+2026/10/09-14:37:04.377 382c Delete type=0 #4

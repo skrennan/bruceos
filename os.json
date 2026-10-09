@@ -1,0 +1,71 @@
+[
+  {
+    "id": 1784896311113,
+    "numeroOS": 1001,
+    "clienteId": 1784895728377,
+    "clienteNome": "DANIEL ABBUD",
+    "telefone": "99991365365",
+    "aparelho": "IPHONE 16 PRO",
+    "defeito": "TROCA DO AUTO FALANTE",
+    "valor": "400",
+    "status": "Pronto",
+    "dataAbertura": "24/07/2026, 09:31:51"
+  },
+  {
+    "id": 1784896454470,
+    "numeroOS": 1002,
+    "clienteId": 1784896445848,
+    "clienteNome": "JUAN SANTOS",
+    "telefone": "9991761824",
+    "aparelho": "REDMI NOTE 15 5G",
+    "defeito": "TROCA DA TELA",
+    "valor": "350",
+    "status": "Pronto",
+    "dataAbertura": "24/07/2026, 09:34:14"
+  },
+  {
+    "id": 1784896843965,
+    "numeroOS": 1003,
+    "clienteId": 1784896834530,
+    "clienteNome": "GILDETE DE SOUSA E SILVA",
+    "telefone": "99991772091",
+    "aparelho": "REDMI NOTE 10 PRO",
+    "defeito": "TROCA DA TELA INCELL",
+    "valor": "180",
+    "status": "Pronto",
+    "dataAbertura": "24/07/2026, 09:40:43"
+  },
+  {
+    "id": 1784897483266,
+    "numeroOS": 1004,
+    "clienteId": 1784896445848,
+    "clienteNome": "JUAN SANTOS",
+    "telefone": "9991761824",
+    "aparelho": "IPHONE 17 PRO MAX",
+    "defeito": "TROCA DA TELA INCELL",
+    "valor": "1200",
+    "status": "Pronto",
+    "dataAbertura": "24/07/2026, 09:51:23"
+  },
+  {
+    "id": 1784902241084,
+    "numeroOS": 1005,
+    "clienteId": 1784902222563,
+    "clienteNome": "William",
+    "telefone": "99991262995",
+    "aparelho": "iPhone 14 plus",
+    "itens": [
+      {
+        "descricao": "Troca da tela ",
+        "valor": "900"
+      },
+      {
+        "descricao": "Bateria",
+        "valor": "400"
+      }
+    ],
+    "valor": "1300,00",
+    "status": "Pronto",
+    "dataAbertura": "24/07/2026, 11:10:41"
+  }
+]

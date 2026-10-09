@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bruce Cell - Sistema de OS & PDV</title>
+    <link rel="stylesheet" href="style.css?v=20261009-5">
+    <script src="api-config.js?v=20261009-5"></script>
+    <style>
+        .abas-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn-aba {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px;
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+        }
+        .btn-aba.ativo {
+            background: #075e54;
+            color: white;
+        }
+        .secao-conteudo {
+            display: none;
+        }
+        .secao-conteudo.ativo {
+            display: block;
+        }
+        .pdv-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1.2fr;
+            gap: 15px;
+        }
+        .maiusculo {
+            text-transform: uppercase;
+        }
+        .whatsapp-status-bar {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .modal-fundo {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-conteudo {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #qrcode-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 240px;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .pdv-grid { grid-template-columns: 1fr; }
+            .whatsapp-status-bar { flex-direction: column; gap: 8px; text-align: center; }
+        }
+    </style>
+    <link rel="stylesheet" href="dashboard.css?v=20261009-5">
+    <link rel="stylesheet" href="oficina.css?v=20261009-5">
+</head>
+<body>
+    <a class="skip-link" href="#workspace">Ir para o conteúdo</a>
+    <aside class="sidebar nao-imprimir">
+        <a class="brand" href="#os"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M10 5h10v22H10z M13 9h4 M14 23h2 M6 12H3 M6 18H3 M26 12h3 M26 18h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>bruce<span class="brand-word">cell</span><small>ASSISTÊNCIA & VENDAS</small></span></a>
+        <div class="nav-caption">GESTÃO</div>
+        <nav id="mainNavigation" aria-label="Navegação principal"></nav>
+        <div class="sidebar-note"><span class="note-dot"></span><strong>Ambiente da loja</strong><p>Atendimento · Estoque · Financeiro</p></div>
+        <div class="sidebar-footer"><span class="avatar">BC</span><div><strong>Bruce Cell</strong><small>Assistência técnica</small></div></div>
+    </aside>
+
+    <!-- MODAL DE QR CODE DO WHATSAPP -->
+    <div id="modalQR" class="modal-fundo">
+        <div class="modal-conteudo" style="text-align: center;">
+            <h3 style="color: #075e54; margin-bottom: 5px;">Conectar WhatsApp</h3>
+            <p id="modalSubtexto" style="font-size: 12px; color: #666;">Buscando QR Code...</p>
+            <div id="qrcode-container">
+                <span style="font-size: 13px; color: #888;">Aguardando servidor...</span>
+            </div>
+            <button type="button" onclick="fecharModal('modalQR')" style="background-color: #d9534f; margin-top: 10px; padding: 10px;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE CADASTRO DE PRODUTO -->
+    <div id="modalProduto" class="modal-fundo">
+        <div class="modal-conteudo">
+            <h3 style="color: #075e54; margin-bottom: 15px; text-align: center;"> Novo Acessório / Produto</h3>
+            <form id="formProdutoPDV" onsubmit="cadastrarProdutoPDV(event)">
+                <label>Nome do Acessório:</label>
+                <input type="text" id="prodNome" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="Ex: CAPINHA IPHONE 13" required>
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Preço Venda (R$):</label>
+                        <input type="text" id="prodPreco" placeholder="Ex: 45.00" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Estoque Inicial:</label>
+                        <input type="number" id="prodEstoque" placeholder="Ex: 10" value="10" required>
+                    </div>
+                </div>
+
+                <label>Código NCM (Opcional):</label>
+                <input type="text" id="prodNcm" placeholder="Ex: 3926.90.90" style="margin-bottom: 15px;">
+
+                <button type="submit" style="background-color: #28a745; margin-bottom: 8px; padding: 12px;">Salvar Produto</button>
+                <button type="button" onclick="fecharModal('modalProduto')" style="background-color: #6c757d; padding: 10px;">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <main class="container" id="workspace" tabindex="-1">
+        <header class="topbar nao-imprimir"><div class="breadcrumb">Área de trabalho <span>/</span> <strong id="breadcrumbTitle">Ordens de serviço</strong></div><div class="topbar-actions"><span id="todayLabel"></span><button type="button" id="refreshData" class="icon-button" aria-label="Atualizar dados">↻</button></div></header>
+        <section class="page-heading nao-imprimir"><div><div class="eyebrow">ATENDIMENTO</div><h1 id="pageTitle">Ordens de serviço</h1><p id="pageDescription">Consulte os reparos e registre novos atendimentos.</p></div><div class="heading-actions"><button type="button" class="secondary-action" id="newCustomer">Novo cliente</button><button type="button" class="quick-action" id="primaryAction">+ Nova OS</button></div></section>
+        <div id="connectionNotice" class="connection-notice nao-imprimir" role="status" hidden>Servidor indisponível. Verifique a conexão e tente atualizar os dados.</div>
+        <button type="button" class="btn-tema nao-imprimir" onclick="alternarTema()">
+             <span id="textoTema">Ativar Modo Escuro</span>
+        </button>
+
+        <div class="whatsapp-status-bar nao-imprimir">
+            <div>
+                 <b>Status WhatsApp:</b> <span id="statusZapTexto" style="color: #e65100; font-weight: bold;">Verificando...</span>
+            </div>
+            <button type="button" onclick="abrirModalQR()" style="background-color: #17a2b8; width: auto; padding: 6px 14px; margin-top: 0; font-size: 12px; font-weight: bold; color: white; border: none; border-radius: 4px; cursor: pointer;"> Abrir QR Code</button>
+        </div>
+
+        <div class="faturamento-grid nao-imprimir">
+            <div class="fat-card">
+                <h3>Hoje</h3>
+                <span id="fatHoje">R$ 0,00</span>
+            </div>
+            <div class="fat-card">
+                <h3>Esta Semana</h3>
+                <span id="fatSemana">R$ 0,00</span>
+            </div>
+            <div class="fat-card">
+                <h3>Este Mês</h3>
+                <span id="fatMes">R$ 0,00</span>
+            </div>
+        </div>
+
+        <div class="abas-container nao-imprimir">
+            <button class="btn-aba ativo" onclick="mudarAba('os')"> Ordens de Serviço</button>
+            <button class="btn-aba" onclick="mudarAba('pdv')"> Ponto de venda</button>
+            <button class="btn-aba" onclick="mudarAba('caixa')"> Caixa</button>
+            <button class="btn-aba" onclick="mudarAba('relatorios')"> Relatórios</button>
+            <button class="btn-aba" onclick="mudarAba('zap')"> WhatsApp</button>
+        </div>
+
+        <!-- ABA 1: ORDENS DE SERVIÇO -->
+        <div id="aba-os" class="secao-conteudo ativo">
+            <div class="card nao-imprimir">
+                <h2>Cadastro de cliente</h2>
+                <label style="font-size: 12px; margin-bottom: 2px;">Selecione para editar (ou deixe em branco para novo):</label>
+                <select id="selectEditarCliente" onchange="preencherFormularioEdicao()" style="margin-bottom: 15px;">
+                    <option value="">-- NOVO CADASTRO --</option>
+                </select>
+
+                <form id="formCliente">
+                    <input type="hidden" id="clienteIdOculto"> 
+                    <label>Nome:</label>
+                    <input type="text" id="nome" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="Ex: JOÃO SILVA" required>
+                    <label>WhatsApp (com DDD):</label>
+                    <input type="text" id="telefone" placeholder="Ex: 99984290321" required>
+                    <label>Aparelho (Modelo):</label>
+                    <input type="text" id="aparelho" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="Ex: IPHONE 12" required>
+                    <button type="submit" id="btnSalvarCliente">Salvar novo cliente</button>
+                </form>
+                <div id="statusCliente" class="msg"></div>
+            </div>
+
+            <div class="card nao-imprimir">
+                <h2>Nova ordem de serviço</h2>
+                <form id="formOS">
+                    <label>Selecione o Cliente:</label>
+                    <select id="selectCliente" required>
+                        <option value="">Carregando clientes...</option>
+                    </select>
+                    
+                    <label>Produtos / Serviços da OS:</label>
+                    <div id="listaItensContainer"></div>
+                    
+                    <button type="button" onclick="adicionarLinhaItem()" style="background-color: #17a2b8; margin-bottom: 15px;">+ Adicionar Produto/Serviço</button>
+                    
+                    <button type="submit" style="background-color: #075e54;">Criar OS e notificar cliente</button>
+                </form>
+                <div id="statusOS" class="msg"></div>
+            </div>
+
+            <div class="card">
+                <h2>Acompanhamento de ordens</h2>
+                
+                <div class="filtro-container nao-imprimir">
+                    <input type="text" id="inputBusca" class="maiusculo" oninput="forcarMaiusculas(this); filtrarOS();" placeholder=" Buscar por cliente ou nº da OS...">
+                    <select id="filtroStatus" onchange="filtrarOS()" style="max-width: 180px;">
+                        <option value="todas_ativas">Ativas (Análise/Reparo)</option>
+                        <option value="Pronto">Prontas</option>
+                        <option value="Entregue">Entregues</option>
+                        <option value="todas">Todas do Histórico</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº OS</th>
+                                <th>Cliente / Aparelho</th>
+                                <th>Produtos, Serviços e Pagto</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaOS">
+                            <tr><td colspan="5" style="text-align: center;">Carregando ordens de serviço...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 2: MINI PDV & ESTOQUE -->
+        <div id="aba-pdv" class="secao-conteudo">
+            <div class="pdv-grid">
+                <div class="card nao-imprimir" style="margin-bottom:0;">
+                    <h2> Frente de Caixa (Venda de Acessórios)</h2>
+                    
+                    <label>Buscar / Selecionar Acessório:</label>
+                    <select id="selectProdutoPDV" onchange="adicionarAoCarrinhoPDV()" style="margin-bottom: 15px;">
+                        <option value="">-- Selecione o produto para vender --</option>
+                    </select>
+
+                    <h3 style="font-size: 14px; margin: 15px 0 5px 0; color: #075e54;">Itens da Venda Atual:</h3>
+                    <div class="table-responsive">
+                        <table style="width:100%; border-collapse:collapse; margin-bottom: 15px;">
+                            <thead>
+                                <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
+                                    <th style="padding:8px; text-align:left; font-size:12px;">Produto</th>
+                                    <th style="padding:8px; text-align:center; font-size:12px; width:60px;">Qtd</th>
+                                    <th style="padding:8px; text-align:right; font-size:12px; width:90px;">Subtotal</th>
+                                    <th style="padding:8px; text-align:center; font-size:12px; width:50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaCarrinhoPDV">
+                                <tr><td colspan="4" style="text-align:center; padding:15px; color:#666;">Carrinho vazio.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:15px; font-weight:bold;">Total a Pagar:</span>
+                        <span id="spanTotalPDV" style="font-size:20px; font-weight:bold; color:#075e54;">R$ 0,00</span>
+                    </div>
+
+                    <label>Forma de Pagamento:</label>
+                    <select id="pagamentoPDV" style="margin-bottom: 15px;">
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="PIX">Pix</option>
+                        <option value="CARTÃO DE CRÉDITO">Cartão de Crédito</option>
+                        <option value="CARTÃO DE DÉBITO">Cartão de Débito</option>
+                    </select>
+
+                    <button type="button" onclick="finalizarVendaPDV()" style="background-color: #28a745; font-size:16px; padding:14px;"> Finalizar Venda e Imprimir</button>
+                </div>
+
+                <div class="card nao-imprimir" style="margin-bottom:0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h2 style="margin:0;"> Estoque</h2>
+                        <button type="button" onclick="abrirModalProduto()" style="background-color: #075e54; width: auto; padding: 6px 12px; font-size: 12px; margin: 0;"> Novo Produto</button>
+                    </div>
+
+                    <form id="formEntradaEstoque" onsubmit="adicionarEstoqueExistente(event)" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                        <h3 style="font-size: 13px; margin: 0 0 8px 0; color: #075e54;">Adicionar Entrada de Estoque:</h3>
+                        <label>Produto:</label>
+                        <select id="selectProdutoEstoque" onchange="preencherDadosEstoque()" required style="margin-bottom: 8px;">
+                            <option value="">-- Selecione o produto --</option>
+                        </select>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <div style="flex: 1;">
+                                <label>Qtd a Somar:</label>
+                                <input type="number" id="qtdAdicionar" placeholder="Ex: 5" value="5" required style="margin-bottom:0;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Novo Preço:</label>
+                                <input type="text" id="estoqueNovoPreco" placeholder="Opcional" style="margin-bottom:0;">
+                            </div>
+                        </div>
+                        <button type="submit" style="background-color: #e65100; padding: 8px; font-size: 12px;"> Salvar Entrada no Estoque</button>
+                    </form>
+
+                    <h3 style="font-size: 13px; margin: 10px 0 6px 0; color: #475569;">Produtos Cadastrados:</h3>
+                    <input type="text" id="inputBuscaEstoque" class="maiusculo" oninput="forcarMaiusculas(this); filtrarEstoque();" placeholder=" Consultar produto..." style="margin-bottom: 8px; font-size: 12px; padding: 6px;">
+
+                    <div style="max-height: 140px; overflow-y: auto;">
+                        <ul id="listaEstoquePDV" style="list-style: none; font-size: 12px;">
+                            <li style="color:#666;">Nenhum produto cadastrado.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 3: FLUXO DE CAIXA -->
+        <div id="aba-caixa" class="secao-conteudo">
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <h2> Controle de Fluxo de Caixa</h2>
+                
+                <!-- Status do Caixa -->
+                <div id="painelCaixaFechado" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #856404; margin-top: 0;"> O Caixa está FECHADO</h3>
+                    <p style="font-size: 13px; color: #666;">Para iniciar as vendas e operações do dia, informe o fundo de troco inicial.</p>
+                    <form onsubmit="abrirCaixa(event)" style="display: flex; gap: 10px; max-width: 400px; margin: 15px auto 0 auto;">
+                        <input type="text" id="valorAberturaCaixa" placeholder="Valor Troco Inicial (R$)" required style="margin-bottom:0;">
+                        <button type="submit" style="background-color: #28a745; width: auto; padding: 10px 20px; margin:0;"> Abrir Caixa</button>
+                    </form>
+                </div>
+
+                <div id="painelCaixaAberto" style="display: none;">
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <div style="flex: 1; background: #e8f5e9; padding: 15px; border-radius: 8px; border: 1px solid #c8e6c9; text-align: center;">
+                            <h4 style="margin: 0; font-size: 12px; color: #2e7d32;">STATUS</h4>
+                            <span style="font-size: 18px; font-weight: bold; color: #2e7d32;">ABERTO </span>
+                        </div>
+                        <div style="flex: 1; background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center;">
+                            <h4 style="margin: 0; font-size: 12px; color: #555;">SALDO EM CAIXA</h4>
+                            <span id="labelSaldoCaixa" style="font-size: 20px; font-weight: bold; color: #075e54;">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação do Caixa -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button type="button" onclick="abrirModalMovimento('SUPRIMENTO')" style="background-color: #17a2b8; flex: 1; padding: 12px;"> Suprimento (Entrada)</button>
+                        <button type="button" onclick="abrirModalMovimento('SANGRIA')" style="background-color: #e65100; flex: 1; padding: 12px;"> Sangria (Retirada)</button>
+                        <button type="button" onclick="abrirModalFechamento()" style="background-color: #d9534f; flex: 1; padding: 12px;"> Fechar Caixa</button>
+                    </div>
+
+                    <h3 style="font-size: 14px; color: #075e54; margin-bottom: 10px;">Movimentações do Dia:</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr style="background: #f1f5f9;">
+                                    <th>Horário</th>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th style="text-align: right;">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaExtratoCaixa">
+                                <tr><td colspan="4" style="text-align: center;">Nenhuma movimentação.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE SANGRIA / SUPRIMENTO -->
+        <div id="modalMovimentoCaixa" class="modal-fundo">
+            <div class="modal-conteudo">
+                <h3 id="tituloModalMov" style="color: #075e54; margin-bottom: 15px; text-align: center;">Movimentação</h3>
+                <form onsubmit="salvarMovimentoCaixa(event)">
+                    <input type="hidden" id="tipoMovimentoHidden">
+                    <label>Valor (R$):</label>
+                    <input type="text" id="valorMov" placeholder="Ex: 50.00" required>
+                    <label>Motivo / Descrição:</label>
+                    <input type="text" id="descMov" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="Ex: PAGAMENTO DE GÁS" required style="margin-bottom: 15px;">
+                    <button type="submit" style="background-color: #28a745; margin-bottom: 8px; padding: 12px;">Confirmar</button>
+                    <button type="button" onclick="fecharModal('modalMovimentoCaixa')" style="background-color: #6c757d; padding: 10px;">Cancelar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL DE FECHAMENTO DE CAIXA -->
+        <div id="modalFechamentoCaixa" class="modal-fundo">
+            <div class="modal-conteudo">
+                <h3 style="color: #d9534f; margin-bottom: 15px; text-align: center;"> Fechamento de Caixa</h3>
+                <form onsubmit="executarFechamentoCaixa(event)">
+                    <label>Valor Contado na Gaveta (R$):</label>
+                    <input type="text" id="valorFechamentoGaveta" placeholder="Ex: 350.00" required>
+                    <label>Observações / Conferência:</label>
+                    <textarea id="obsFechamento" rows="3" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="EX: TUDO OK" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; margin-bottom: 15px;"></textarea>
+                    <button type="submit" style="background-color: #d9534f; margin-bottom: 8px; padding: 12px;">Finalizar e Fechar Caixa</button>
+                    <button type="button" onclick="fecharModal('modalFechamentoCaixa')" style="background-color: #6c757d; padding: 10px;">Cancelar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ABA 4: RELATÓRIOS E CAIXA -->
+        <div id="aba-relatorios" class="secao-conteudo">
+            <div class="card">
+                <h2> Relatório Consolidado de Faturamento (OS + PDV)</h2>
+                <div style="display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;">
+                    <div style="flex:1; background:#f1f5f9; padding:15px; border-radius:8px; text-align:center;">
+                        <h4 style="margin:0; font-size:13px; color:#555;">Total Faturado Hoje</h4>
+                        <span id="relFatHoje" style="font-size:22px; font-weight:bold; color:#075e54;">R$ 0,00</span>
+                    </div>
+                    <div style="flex:1; background:#f1f5f9; padding:15px; border-radius:8px; text-align:center;">
+                        <h4 style="margin:0; font-size:13px; color:#555;">Total Faturado na Semana</h4>
+                        <span id="relFatSemana" style="font-size:22px; font-weight:bold; color:#075e54;">R$ 0,00</span>
+                    </div>
+                    <div style="flex:1; background:#f1f5f9; padding:15px; border-radius:8px; text-align:center;">
+                        <h4 style="margin:0; font-size:13px; color:#555;">Total Faturado no Mês</h4>
+                        <span id="relFatMes" style="font-size:22px; font-weight:bold; color:#075e54;">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 15px; color: #075e54; margin-bottom: 10px;">Histórico de Entradas Concluídas:</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº / Data</th>
+                                <th>Descrição / Venda / Cliente</th>
+                                <th>Forma de Pagto</th>
+                                <th>Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaRelatorio">
+                            <tr><td colspan="4" style="text-align: center;">Carregando relatório...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 5: DISPARO LIVRE WHATSAPP -->
+        <div id="aba-zap" class="secao-conteudo">
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <h2> Disparo Rápido de Mensagem no WhatsApp</h2>
+                <form id="formDisparoLivre" onsubmit="enviarMensagemLivre(event)">
+                    <label>Número do WhatsApp (com DDD):</label>
+                    <input type="text" id="zapNumero" placeholder="Ex: 99984290321" required style="margin-bottom: 15px;">
+
+                    <label>Mensagem:</label>
+                    <textarea id="zapMensagem" rows="5" class="maiusculo" oninput="forcarMaiusculas(this)" placeholder="DIGITE SUA MENSAGEM AQUI..." required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; margin-bottom: 15px;"></textarea>
+
+                    <button type="submit" style="background-color: #25d366; font-size: 15px; padding: 14px;"> Enviar Mensagem Agora</button>
+                </form>
+                <div id="statusDisparoLivre" class="msg" style="margin-top: 10px; text-align: center; font-weight: bold;"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="areaImpressao" style="display:none;"></div>
+
+    <script>
+        const API_URL = window.BRUCE_API_URL || (location.protocol === 'file:' ? 'http://localhost:3000' : location.origin);
+        let clientesData = [];
+        let osGlobalData = [];
+        let produtosPDV = [];
+        let carrinhoPDV = [];
+        let qrGeradoAnterior = '';
+
+        function forcarMaiusculas(input) {
+            input.value = input.value.toUpperCase();
+        }
+
+        async function verificarStatusWhatsApp() {
+            try {
+                const res = await fetch(`${API_URL}/whatsapp/status`);
+                const data = await res.json();
+                const statusTexto = document.getElementById('statusZapTexto');
+                const modalSubtexto = document.getElementById('modalSubtexto');
+
+                if (data.status === 'CONECTADO') {
+                    statusTexto.textContent = 'CONECTADO ';
+                    statusTexto.style.color = '#2e7d32';
+                    modalSubtexto.textContent = 'WhatsApp conectado!';
+                    fecharModal('modalQR');
+                } else if (data.status === 'AGUARDANDO_LEITURA' && data.qr) {
+                    statusTexto.textContent = 'AGUARDANDO LEITURA ';
+                    statusTexto.style.color = '#d9534f';
+                    modalSubtexto.textContent = 'Escaneie o QR Code abaixo:';
+
+                    if (data.qr !== qrGeradoAnterior) {
+                        renderizarQRCode(data.qrImage);
+                        qrGeradoAnterior = data.qr;
+                    }
+                } else {
+                    statusTexto.textContent = 'INICIALIZANDO... ';
+                    statusTexto.style.color = '#e65100';
+                    modalSubtexto.textContent = 'Gerando sessão no servidor...';
+                }
+            } catch (e) { document.getElementById('statusZapTexto').textContent = 'Servidor indisponível'; }
+        }
+
+        function renderizarQRCode(imagemQR) {
+            const container = document.getElementById('qrcode-container');
+            if (!imagemQR || !imagemQR.startsWith('data:image/svg+xml;base64,')) {
+                container.textContent = 'Reinicie o servidor para carregar a imagem do QR Code.';
+                throw new Error('Imagem do QR Code não disponível');
+            }
+            const image = new Image();
+            image.alt = 'QR Code para conectar o WhatsApp';
+            image.width = 264;
+            image.height = 264;
+            image.style.cssText = 'max-width:100%;height:auto;display:block';
+            image.src = imagemQR;
+            container.replaceChildren(image);
+        }
+
+        function abrirModalQR() {
+            document.getElementById('modalQR').style.display = 'flex';
+            verificarStatusWhatsApp();
+        }
+
+        function abrirModalProduto() {
+            document.getElementById('modalProduto').style.display = 'flex';
+        }
+
+        function fecharModal(idModal) {
+            document.getElementById(idModal).style.display = 'none';
+        }
+
+        setInterval(verificarStatusWhatsApp, 3000);
+
+        function alternarTema() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('brucecell_tema', isDark ? 'escuro' : 'claro');
+            atualizarTextoBotaoTema(isDark);
+        }
+
+        function atualizarTextoBotaoTema(isDark) {
+            const btnTexto = document.getElementById('textoTema');
+            if (btnTexto) btnTexto.textContent = isDark ? 'Ativar Modo Claro' : 'Ativar Modo Escuro';
+        }
+
+        function mudarAba(aba) {
+            document.querySelectorAll('.btn-aba').forEach(b => b.classList.remove('ativo'));
+            document.querySelectorAll('.secao-conteudo').forEach(s => s.classList.remove('ativo'));
+
+            if (aba === 'os') {
+                document.querySelectorAll('.btn-aba')[0].classList.add('ativo');
+                document.getElementById('aba-os').classList.add('ativo');
+                carregarOS();
+                carregarClientes();
+            } else if (aba === 'pdv') {
+                document.querySelectorAll('.btn-aba')[1].classList.add('ativo');
+                document.getElementById('aba-pdv').classList.add('ativo');
+                carregarProdutosServidor();
+            } else if (aba === 'caixa') {
+                document.querySelectorAll('.btn-aba')[2].classList.add('ativo');
+                document.getElementById('aba-caixa').classList.add('ativo');
+                carregarStatusCaixa();
+            } else if (aba === 'relatorios') {
+                document.querySelectorAll('.btn-aba')[3].classList.add('ativo');
+                document.getElementById('aba-relatorios').classList.add('ativo');
+                carregarRelatorios();
+            } else if (aba === 'zap') {
+                document.querySelectorAll('.btn-aba')[4].classList.add('ativo');
+                document.getElementById('aba-zap').classList.add('ativo');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const temaSalvo = localStorage.getItem('brucecell_tema');
+            if (temaSalvo === 'escuro') {
+                document.body.classList.add('dark-mode');
+                atualizarTextoBotaoTema(true);
+            }
+            verificarStatusWhatsApp();
+            carregarProdutosServidor();
+            carregarClientes();
+            carregarOS();
+            adicionarLinhaItem();
+        });
+
+        // FUNÇÕES DE CONTROLE DE CAIXA
+        async function carregarStatusCaixa() {
+            try {
+                const res = await fetch(`${API_URL}/caixa/status`);
+                const data = await res.json();
+                
+                const painelFechado = document.getElementById('painelCaixaFechado');
+                const painelAberto = document.getElementById('painelCaixaAberto');
+
+                if (data.aberto) {
+                    painelFechado.style.display = 'none';
+                    painelAberto.style.display = 'block';
+                    document.getElementById('labelSaldoCaixa').textContent = `R$ ${data.saldoAtual}`;
+                    carregarExtratoCaixa();
+                } else {
+                    painelFechado.style.display = 'block';
+                    painelAberto.style.display = 'none';
+                }
+            } catch (e) { console.error('Erro ao carregar caixa', e); }
+        }
+
+        async function abrirCaixa(e) {
+            e.preventDefault();
+            const valorInicial = parseFloat(document.getElementById('valorAberturaCaixa').value.replace(',', '.'));
+            
+            try {
+                const res = await fetch(`${API_URL}/caixa/abrir`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ valorInicial })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Caixa aberto com sucesso!');
+                    carregarStatusCaixa();
+                }
+            } catch (e) { alert('Erro ao abrir caixa.'); }
+        }
+
+        function abrirModalMovimento(tipo) {
+            document.getElementById('tipoMovimentoHidden').value = tipo;
+            document.getElementById('tituloModalMov').textContent = tipo === 'SUPRIMENTO' ? ' Adicionar Suprimento' : ' Realizar Sangria';
+            document.getElementById('valorMov').value = '';
+            document.getElementById('descMov').value = '';
+            document.getElementById('modalMovimentoCaixa').style.display = 'flex';
+        }
+
+        async function salvarMovimentoCaixa(e) {
+            e.preventDefault();
+            const tipo = document.getElementById('tipoMovimentoHidden').value;
+            const valor = parseFloat(document.getElementById('valorMov').value.replace(',', '.'));
+            const descricao = document.getElementById('descMov').value;
+
+            try {
+                const res = await fetch(`${API_URL}/caixa/movimentar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo, valor, descricao })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert(`${tipo} realizada com sucesso!`);
+                    fecharModal('modalMovimentoCaixa');
+                    carregarStatusCaixa();
+                }
+            } catch (e) { alert('Erro ao registrar movimentação.'); }
+        }
+
+        function abrirModalFechamento() {
+            document.getElementById('valorFechamentoGaveta').value = '';
+            document.getElementById('obsFechamento').value = '';
+            document.getElementById('modalFechamentoCaixa').style.display = 'flex';
+        }
+
+        async function executarFechamentoCaixa(e) {
+            e.preventDefault();
+            const valorFechamento = parseFloat(document.getElementById('valorFechamentoGaveta').value.replace(',', '.'));
+            const observacao = document.getElementById('obsFechamento').value;
+
+            try {
+                const res = await fetch(`${API_URL}/caixa/fechar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ valorFechamento, observacao })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Caixa fechado com sucesso!');
+                    fecharModal('modalFechamentoCaixa');
+                    carregarStatusCaixa();
+                }
+            } catch (e) { alert('Erro ao fechar caixa.'); }
+        }
+
+        async function carregarExtratoCaixa() {
+            try {
+                const res = await fetch(`${API_URL}/caixa/extrato`);
+                const movimentos = await res.json();
+                const tbody = document.getElementById('tabelaExtratoCaixa');
+                tbody.innerHTML = '';
+
+                if (movimentos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhuma movimentação.</td></tr>';
+                    return;
+                }
+
+                movimentos.forEach(m => {
+                    let corValor = '#075e54';
+                    let sinal = '+';
+                    if (m.tipo === 'SANGRIA') {
+                        corValor = '#d9534f';
+                        sinal = '-';
+                    } else if (m.tipo === 'ABERTURA' || m.tipo === 'SUPRIMENTO') {
+                        corValor = '#2e7d32';
+                        sinal = '+';
+                    } else if (m.tipo === 'FECHAMENTO') {
+                        corValor = '#333';
+                        sinal = '';
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><small>${m.dataHora.split(',')[1] || m.dataHora}</small></td>
+                            <td><b>${m.tipo}</b></td>
+                            <td>${m.descricao}</td>
+                            <td style="text-align: right; color: ${corValor}; font-weight: bold;">${sinal} R$ ${m.valor.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function carregarClientes() {
+            try {
+                const res = await fetch(`${API_URL}/clientes`);
+                clientesData = await res.json();
+                const selectOS = document.getElementById('selectCliente');
+                const selectEditar = document.getElementById('selectEditarCliente');
+                
+                if (selectOS) selectOS.innerHTML = '<option value="">Selecione...</option>';
+                if (selectEditar) selectEditar.innerHTML = '<option value="">-- NOVO CADASTRO --</option>';
+
+                clientesData.forEach(c => {
+                    const textoOpcao = `${c.nome} - ${c.aparelho} (${c.telefone})`;
+                    if (selectOS) selectOS.innerHTML += `<option value="${c.id}">${textoOpcao}</option>`;
+                    if (selectEditar) selectEditar.innerHTML += `<option value="${c.id}">${textoOpcao}</option>`;
+                });
+            } catch (e) { console.error('Erro ao carregar clientes:', e); }
+        }
+
+        function adicionarLinhaItem(descricao = '', valor = '') {
+            const container = document.getElementById('listaItensContainer');
+            const div = document.createElement('div');
+            div.className = 'item-row';
+            div.style.display = 'flex';
+            div.style.gap = '8px';
+            div.style.marginBottom = '8px';
+            div.innerHTML = `
+                <input type="text" placeholder="EX: TELA / MÃO DE OBRA" value="${descricao}" class="item-desc maiusculo" oninput="forcarMaiusculas(this)" required style="flex: 2; margin-bottom:0;">
+                <input type="text" placeholder="VALOR R$" value="${valor}" class="item-valor" required style="flex: 1; margin-bottom:0;">
+                <button type="button" class="btn-remover" aria-label="Remover item da ordem" onclick="removerLinhaItem(this)" style="background:#d9534f; color:white; border:none; padding:0 12px; border-radius:4px; cursor:pointer;">×</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removerLinhaItem(botao) {
+            const container = document.getElementById('listaItensContainer');
+            if (container.children.length > 1) {
+                botao.parentElement.remove();
+            } else {
+                alert('A OS precisa ter pelo menos um item.');
+            }
+        }
+
+        async function carregarOS() {
+            try {
+                const res = await fetch(`${API_URL}/os`);
+                osGlobalData = await res.json();
+                filtrarOS();
+                atualizarResumoOperacional();
+            } catch (e) { console.error(e); }
+        }
+
+        function filtrarOS() {
+            const termo = document.getElementById('inputBusca').value;
+            const tipoFiltro = document.getElementById('filtroStatus').value;
+            const tbody = document.getElementById('tabelaOS');
+            tbody.innerHTML = '';
+
+            let listaFiltrada = osGlobalData.filter(os => {
+                const matchTexto = String(os.clienteNome || '').toUpperCase().includes(termo) || 
+                                   os.numeroOS.toString().includes(termo) || 
+                                   String(os.aparelho || '').toUpperCase().includes(termo);
+                
+                if (!matchTexto) return false;
+
+                if (tipoFiltro === 'todas_ativas') {
+                    return os.status === 'EM ANÁLISE' || os.status === 'EM REPARO';
+                } else if (tipoFiltro === 'Pronto') {
+                    return os.status === 'PRONTO';
+                } else if (tipoFiltro === 'Entregue') {
+                    return os.status === 'ENTREGUE';
+                }
+                return true;
+            });
+
+            if (listaFiltrada.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Nenhuma OS encontrada.</td></tr>`;
+                return;
+            }
+
+            listaFiltrada.reverse().forEach(os => {
+                let classeBadge = 'analise';
+                if (os.status === 'EM REPARO') classeBadge = 'reparo';
+                if (os.status === 'PRONTO') classeBadge = 'pronto';
+                if (os.status === 'ENTREGUE') classeBadge = 'entregue';
+
+                let itensHtml = '';
+                if (os.itens && Array.isArray(os.itens)) {
+                    itensHtml = os.itens.map(i => `• ${i.descricao}: <b>R$ ${i.valor}</b>`).join('<br>');
+                } else {
+                    itensHtml = 'Nenhum item especificado';
+                }
+
+                let pagtoInfo = os.pagamento && os.pagamento !== 'NÃO DEFINIDO' ? `<br><small> Pagto: <b>${os.pagamento}</b></small>` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>#${os.numeroOS}</b><br><small>${os.dataAbertura.split(',')[0]}</small></td>
+                        <td>${os.clienteNome}<br><small>${os.aparelho}</small></td>
+                        <td>${itensHtml}${pagtoInfo}<br><hr style="margin:5px 0; border:0; border-top:1px solid #444;"><b>Total: R$ ${os.valor}</b></td>
+                        <td><span class="badge ${classeBadge}">${os.status}</span></td>
+                        <td class="order-actions-cell">
+                          <div class="order-actions">
+                            <select aria-label="Alterar status da OS ${os.numeroOS}" onchange="mudarStatusComPagamento(${os.id}, this.value)">
+                                <option value="" disabled selected>Alterar status...</option>
+                                <option value="EM ANÁLISE">Em Análise</option>
+                                <option value="EM REPARO">Em Reparo</option>
+                                <option value="PRONTO">Pronto (Avisa Zap)</option>
+                                <option value="ENTREGUE">Entregue</option>
+                            </select>
+                            <details class="print-menu"><summary aria-label="Opções de impressão da OS ${os.numeroOS}"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 13h10v8H7zM17 11h1"/></svg><span>Imprimir</span></summary><div class="print-options"><button type="button" onclick="imprimirOS(${os.numeroOS}, 'bobina'); this.closest('details').open=false">Bobina · 80 mm</button><button type="button" onclick="imprimirOS(${os.numeroOS}, 'a4'); this.closest('details').open=false">Folha · A4</button></div></details>
+                          </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function mudarStatusComPagamento(id, novoStatus) {
+            let pagamento = null;
+            if (novoStatus === 'PRONTO' || novoStatus === 'ENTREGUE') {
+                pagamento = prompt("Informe a forma de pagamento (Ex: PIX, DINHEIRO, CARTÃO):", "PIX");
+                if (!pagamento) return;
+                pagamento = pagamento.toUpperCase();
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/os/${id}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus, pagamento })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    carregarOS();
+                    carregarFaturamento();
+                }
+            } catch (e) { alert('Erro de conexão'); }
+        }
+
+        function imprimirOS(numeroOS, formato) {
+            const os = osGlobalData.find(o => o.numeroOS === numeroOS);
+            if (!os) return;
+
+            let itensHTML = '';
+            if (os.itens && Array.isArray(os.itens)) {
+                itensHTML = os.itens.map(i => `<tr><td style="padding: 2px 0;">${i.descricao}</td><td style="text-align:right; padding: 2px 0;">R$ ${i.valor}</td></tr>`).join('');
+            } else {
+                itensHTML = `<tr><td colspan="2">Nenhum item detalhado</td></tr>`;
+            }
+
+            const area = document.getElementById('areaImpressao');
+            area.style.display = 'block';
+
+            if (formato === 'bobina') {
+                area.innerHTML = `
+                    <div style="font-family: 'Courier New', Courier, monospace; width: 72mm; margin: 0 auto; font-size: 11px; color: #000; background: #fff; padding: 2mm;">
+                        <div style="text-align: center;">
+                            <h3 style="margin: 0; font-size: 14px;">BRUCE CELL </h3>
+                            <p style="margin: 2px 0; font-size: 9px;">Assistência Técnica Especializada</p>
+                            <p style="margin: 0 0 5px 0; font-size: 9px;">Açailândia - MA</p>
+                        </div>
+                        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                        <p style="margin: 2px 0;"><b>OS:</b> #${os.numeroOS}</p>
+                        <p style="margin: 2px 0;"><b>Data:</b> ${os.dataAbertura}</p>
+                        <p style="margin: 2px 0;"><b>Cliente:</b> ${os.clienteNome}</p>
+                        <p style="margin: 2px 0;"><b>Fone:</b> ${os.telefone}</p>
+                        <p style="margin: 2px 0;"><b>Aparelho:</b> ${os.aparelho}</p>
+                        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                        <table style="width:100%; border-collapse: collapse; font-size: 11px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #000;">
+                                    <th style="text-align:left; padding-bottom: 2px;">Item</th>
+                                    <th style="text-align:right; padding-bottom: 2px;">R$</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itensHTML}
+                            </tbody>
+                        </table>
+                        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                        <div style="text-align: right; font-size: 13px; margin: 4px 0;">
+                            <b>TOTAL: R$ ${os.valor}</b>
+                        </div>
+                        <p style="margin: 2px 0;"><b>Pagto:</b> ${os.pagamento || 'NÃO DEFINIDO'}</p>
+                        <p style="margin: 2px 0;"><b>Status:</b> ${os.status}</p>
+                        <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                        <p style="font-size: 8px; text-align: justify; margin: 2px 0;">
+                            Garantia de 90 dias sobre os serviços e peças descritas. Aparelhos não retirados em até 90 dias ficam sujeitos a taxa de guarda.
+                        </p>
+                        <br><br>
+                        <div style="text-align: center; font-size: 10px;">
+                            ________________________________<br>
+                            Assinatura do Cliente
+                        </div>
+                    </div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; font-size: 13px; color: #000; background: #fff; padding: 30px; border: 1px solid #ddd;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #075e54; padding-bottom: 15px;">
+                            <div>
+                                <h1 style="margin: 0; color: #075e54; font-size: 24px;">BRUCE CELL </h1>
+                                <p style="margin: 4px 0 0 0; font-size: 12px; color: #555;">Assistência Técnica Especializada em Celulares e Eletrônicos</p>
+                                <p style="margin: 2px 0 0 0; font-size: 11px; color: #777;">Açailândia - MA</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <h2 style="margin: 0; color: #333; font-size: 18px;">ORDEM DE SERVIÇO</h2>
+                                <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #d9534f;">Nº #${os.numeroOS}</p>
+                                <p style="margin: 2px 0; font-size: 11px; color: #555;">Data: ${os.dataAbertura}</p>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #075e54;">
+                            <p style="margin: 5px 0;"><b>Nome do Cliente:</b> ${os.clienteNome}</p>
+                            <p style="margin: 5px 0;"><b>Telefone / WhatsApp:</b> ${os.telefone}</p>
+                            <p style="margin: 5px 0;"><b>Aparelho / Modelo:</b> ${os.aparelho}</p>
+                        </div>
+
+                        <h3 style="margin-top: 25px; color: #075e54; border-bottom: 1px solid #ccc; padding-bottom: 5px; font-size: 15px;">Discriminação de Produtos e Serviços</h3>
+                        <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background: #075e54; color: white;">
+                                    <th style="padding: 10px; text-align: left;">Descrição do Item / Serviço</th>
+                                    <th style="padding: 10px; text-align: right; width: 140px;">Valor (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itensHTML}
+                            </tbody>
+                        </table>
+
+                        <div style="text-align: right; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd;">
+                            <p style="margin: 5px 0; font-size: 14px;"><b>Forma de Pagamento:</b> ${os.pagamento || 'NÃO DEFINIDO'}</p>
+                            <p style="margin: 5px 0; font-size: 22px; color: #075e54;"><b>VALOR TOTAL: R$ ${os.valor}</b></p>
+                            <p style="margin: 5px 0; font-size: 12px; color: #666;">Status atual da OS: <b>${os.status}</b></p>
+                        </div>
+
+                        <div style="margin-top: 40px; border-top: 1px dashed #999; padding-top: 12px; font-size: 10px; text-align: justify; color: #444; line-height: 1.4;">
+                            <p style="margin: 0 0 5px 0;"><b>TERMO DE GARANTIA E CONDIÇÕES DE SERVIÇO:</b></p>
+                            <p style="margin: 0 0 3px 0;">1. A garantia cobre exclusivamente os serviços executados e as peças trocadas discriminadas nesta OS, pelo prazo legal de 90 dias a contar da data de retirada do aparelho.</p>
+                            <p style="margin: 0 0 3px 0;">2. A garantia perde totalmente a validade em caso de sinais de quedas, novos impactos, contato com líquidos/umidade, violação de selos de garantia ou indícios de mau uso.</p>
+                        </div>
+
+                        <div style="margin-top: 60px; display: flex; justify-content: space-around; text-align: center;">
+                            <div>
+                                _________________________________________<br>
+                                <span style="font-size: 11px; color: #555;">Assinatura da Loja (Bruce Cell)</span>
+                            </div>
+                            <div>
+                                _________________________________________<br>
+                                <span style="font-size: 11px; color: #555;">Assinatura do Cliente</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.print();
+            area.style.display = 'none';
+        }
+
+        async function carregarProdutosServidor() {
+            try {
+                const res = await fetch(`${API_URL}/produtos`);
+                produtosPDV = await res.json();
+                atualizarSelectProdutosPDV();
+                atualizarSelectEstoqueEntrada();
+                atualizarListaEstoque();
+            } catch (e) { console.error(e); }
+        }
+
+        async function cadastrarProdutoPDV(e) {
+            e.preventDefault();
+            const nome = document.getElementById('prodNome').value;
+            const preco = parseFloat(document.getElementById('prodPreco').value.replace(',', '.'));
+            const estoque = parseInt(document.getElementById('prodEstoque').value);
+            const ncm = document.getElementById('prodNcm').value;
+
+            try {
+                const res = await fetch(`${API_URL}/produtos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, preco, estoque, ncm })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Produto cadastrado com sucesso!');
+                    document.getElementById('formProdutoPDV').reset();
+                    fecharModal('modalProduto');
+                    carregarProdutosServidor();
+                } else {
+                    alert('Erro: ' + (data.error || 'Não foi possível cadastrar'));
+                }
+            } catch (e) { alert('Erro de conexão com o servidor.'); }
+        }
+
+        function atualizarSelectEstoqueEntrada() {
+            const select = document.getElementById('selectProdutoEstoque');
+            select.innerHTML = '<option value="">-- Selecione o produto --</option>';
+            produtosPDV.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.nome} (Estoque: ${p.estoque})</option>`;
+            });
+        }
+
+        function preencherDadosEstoque() {
+            const id = document.getElementById('selectProdutoEstoque').value;
+            const prod = produtosPDV.find(p => p.id == id);
+            if(prod) {
+                document.getElementById('estoqueNovoPreco').value = prod.preco;
+            }
+        }
+
+        async function adicionarEstoqueExistente(e) {
+            e.preventDefault();
+            const id = document.getElementById('selectProdutoEstoque').value;
+            const adicionarEstoque = parseInt(document.getElementById('qtdAdicionar').value) || 0;
+            const precoVal = document.getElementById('estoqueNovoPreco').value;
+
+            if(!id) {
+                alert('Selecione um produto.');
+                return;
+            }
+
+            const corpo = { adicionarEstoque };
+            if (precoVal) corpo.preco = parseFloat(precoVal.replace(',', '.'));
+
+            try {
+                const res = await fetch(`${API_URL}/produtos/${id}/estoque`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(corpo)
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Estoque atualizado com sucesso!');
+                    document.getElementById('formEntradaEstoque').reset();
+                    carregarProdutosServidor();
+                }
+            } catch (e) { alert('Erro ao atualizar estoque.'); }
+        }
+
+        function atualizarSelectProdutosPDV() {
+            const select = document.getElementById('selectProdutoPDV');
+            select.innerHTML = '<option value="">-- Selecione o produto para vender --</option>';
+            produtosPDV.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.nome} - R$ ${p.preco.toFixed(2)} (Estoque: ${p.estoque})</option>`;
+            });
+        }
+
+        function atualizarListaEstoque(listaFiltrada = null) {
+            const lista = document.getElementById('listaEstoquePDV');
+            const dadosParaExibir = listaFiltrada || produtosPDV;
+
+            if (dadosParaExibir.length === 0) {
+                lista.innerHTML = '<li style="color:#666; padding: 5px;">Nenhum produto encontrado.</li>';
+                return;
+            }
+            lista.innerHTML = '';
+            dadosParaExibir.forEach(p => {
+                let ncmTxt = p.ncm ? ` | NCM: ${p.ncm}` : '';
+                lista.innerHTML += `<li style="padding:4px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${p.nome} (<b>${p.estoque} un</b>${ncmTxt})</span> <b>R$ ${p.preco.toFixed(2)}</b></li>`;
+            });
+        }
+
+        function filtrarEstoque() {
+            const termo = document.getElementById('inputBuscaEstoque').value;
+            const filtrados = produtosPDV.filter(p => p.nome.includes(termo));
+            atualizarListaEstoque(filtrados);
+        }
+
+        function adicionarAoCarrinhoPDV() {
+            const select = document.getElementById('selectProdutoPDV');
+            const prodId = select.value;
+            if (!prodId) return;
+
+            const produto = produtosPDV.find(p => p.id == prodId);
+            if (!produto || produto.estoque <= 0) {
+                alert('Produto sem estoque!');
+                select.value = '';
+                return;
+            }
+
+            const itemExistente = carrinhoPDV.find(i => i.id == prodId);
+            if (itemExistente) {
+                if (itemExistente.quantidade >= produto.estoque) {
+                    alert('Quantidade excede o estoque disponível!');
+                    return;
+                }
+                itemExistente.quantidade++;
+            } else {
+                carrinhoPDV.push({ id: produto.id, nome: produto.nome, preco: produto.preco, quantidade: 1 });
+            }
+
+            select.value = '';
+            atualizarCarrinhoPDV();
+        }
+
+        function atualizarCarrinhoPDV() {
+            const tbody = document.getElementById('tabelaCarrinhoPDV');
+            const spanTotal = document.getElementById('spanTotalPDV');
+            tbody.innerHTML = '';
+
+            if (carrinhoPDV.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#666;">Carrinho vazio.</td></tr>';
+                spanTotal.textContent = 'R$ 0,00';
+                return;
+            }
+
+            let totalGeral = 0;
+            carrinhoPDV.forEach((item, index) => {
+                const subtotal = item.preco * item.quantidade;
+                totalGeral += subtotal;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding:8px; font-size:12px;">${item.nome}</td>
+                        <td style="padding:8px; text-align:center; font-size:12px;">${item.quantidade}</td>
+                        <td style="padding:8px; text-align:right; font-size:12px;">R$ ${subtotal.toFixed(2)}</td>
+                        <td style="padding:8px; text-align:center;"><button type="button" aria-label="Remover produto do carrinho" onclick="removerItemCarrinho(${index})" style="background:#d9534f; padding:4px 8px; margin:0; font-size:16px;">×</button></td>
+                    </tr>
+                `;
+            });
+
+            spanTotal.textContent = `R$ ${totalGeral.toFixed(2)}`;
+        }
+
+        function removerItemCarrinho(index) {
+            carrinhoPDV.splice(index, 1);
+            atualizarCarrinhoPDV();
+        }
+
+        async function finalizarVendaPDV() {
+            if (carrinhoPDV.length === 0) {
+                alert('O carrinho está vazio.');
+                return;
+            }
+
+            const formaPagamento = document.getElementById('pagamentoPDV').value;
+            let totalVenda = carrinhoPDV.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+
+            for (let itemCarrinho of carrinhoPDV) {
+                const prod = produtosPDV.find(p => p.id == itemCarrinho.id);
+                if (prod) {
+                    await fetch(`${API_URL}/produtos/${prod.id}/estoque`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adicionarEstoque: -itemCarrinho.quantidade })
+                    });
+                }
+            }
+
+            try {
+                await fetch(`${API_URL}/os`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clienteId: null,
+                        pagamentoPDV: formaPagamento,
+                        clienteNome: "BALCÃO / ACESSÓRIOS",
+                        aparelho: "VENDA DE ACESSÓRIOS",
+                        itens: carrinhoPDV.map(i => ({ descricao: `${i.quantidade}x ${i.nome}`, valor: (i.preco * i.quantidade).toFixed(2) }))
+                    })
+                });
+            } catch (e) { console.error("Erro ao sincronizar venda", e); }
+
+            imprimirComprovanteVenda(carrinhoPDV, totalVenda, formaPagamento);
+
+            carrinhoPDV = [];
+            atualizarCarrinhoPDV();
+            carregarProdutosServidor();
+            carregarFaturamento();
+            alert('Venda realizada e registrada com sucesso!');
+        }
+
+        function imprimirComprovanteVenda(itens, total, formaPagamento) {
+            const dataHora = new Date().toLocaleString();
+            let itensHTML = itens.map(i => `<tr><td style="padding: 2px 0;">${i.quantidade}x ${i.nome}</td><td style="text-align:right; padding: 2px 0;">R$ ${(i.preco * i.quantidade).toFixed(2)}</td></tr>`).join('');
+
+            const area = document.getElementById('areaImpressao');
+            area.style.display = 'block';
+            
+            area.innerHTML = `
+                <div style="font-family: 'Courier New', Courier, monospace; width: 72mm; margin: 0 auto; font-size: 11px; color: #000; background: #fff; padding: 2mm;">
+                    <div style="text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px;">BRUCE CELL </h3>
+                        <p style="margin: 2px 0; font-size: 9px;">Comprovante de Venda / Acessórios</p>
+                        <p style="margin: 0 0 5px 0; font-size: 9px;">Açailândia - MA</p>
+                    </div>
+                    <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                    <p style="margin: 2px 0;"><b>Data:</b> ${dataHora}</p>
+                    <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                    <table style="width:100%; border-collapse: collapse; font-size: 11px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #000;">
+                                <th style="text-align:left; padding-bottom: 2px;">Item</th>
+                                <th style="text-align:right; padding-bottom: 2px;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itensHTML}
+                        </tbody>
+                    </table>
+                    <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                    <div style="text-align: right; font-size: 13px; margin: 4px 0;">
+                        <b>TOTAL: R$ ${total.toFixed(2)}</b>
+                    </div>
+                    <p style="margin: 2px 0;"><b>Forma de Pagto:</b> ${formaPagamento}</p>
+                    <div style="border-top: 1px dashed #000; margin: 4px 0;"></div>
+                    <p style="text-align: center; font-size: 10px; margin: 5px 0;">Obrigado pela preferência!</p>
+                </div>
+            `;
+
+            window.print();
+            area.style.display = 'none';
+        }
+
+        async function enviarMensagemLivre(e) {
+            e.preventDefault();
+            const telefone = document.getElementById('zapNumero').value;
+            const mensagem = document.getElementById('zapMensagem').value;
+            const statusDiv = document.getElementById('statusDisparoLivre');
+
+            statusDiv.style.color = '#17a2b8';
+            statusDiv.textContent = 'Enviando mensagem...';
+
+            try {
+                const res = await fetch(`${API_URL}/enviar-mensagem`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefone, mensagem })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.style.color = '#28a745';
+                    statusDiv.textContent = ' Mensagem enviada com sucesso!';
+                    document.getElementById('formDisparoLivre').reset();
+                } else {
+                    statusDiv.style.color = '#d9534f';
+                    statusDiv.textContent = ' Erro: ' + (data.error || 'Verifique o número');
+                }
+            } catch (err) {
+                statusDiv.style.color = '#d9534f';
+                statusDiv.textContent = ' Erro de conexão com o servidor local.';
+            }
+        }
+
+        document.getElementById('formCliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('clienteIdOculto').value;
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const aparelho = document.getElementById('aparelho').value;
+            const statusDiv = document.getElementById('statusCliente');
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetch(`${API_URL}/clientes/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nome, telefone, aparelho })
+                    });
+                } else {
+                    res = await fetch(`${API_URL}/clientes`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nome, telefone, aparelho })
+                    });
+                }
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.style.color = '#2e7d32';
+                    statusDiv.textContent = id ? ' Cliente atualizado com sucesso!' : ' Cliente cadastrado com sucesso!';
+                    document.getElementById('formCliente').reset();
+                    document.getElementById('clienteIdOculto').value = '';
+                    document.getElementById('selectEditarCliente').value = '';
+                    document.getElementById('btnSalvarCliente').textContent = 'Salvar novo cliente';
+                    document.getElementById('btnSalvarCliente').style.backgroundColor = '#25d366';
+                    carregarClientes();
+                } else {
+                    statusDiv.style.color = '#d9534f';
+                    statusDiv.textContent = ' Erro: ' + (data.error || 'Não foi possível salvar.');
+                }
+            } catch (err) {
+                statusDiv.style.color = '#d9534f';
+                statusDiv.textContent = ' Erro de conexão com o servidor local.';
+            }
+        });
+
+        document.getElementById('formOS').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clienteId = document.getElementById('selectCliente').value;
+            
+            if (!clienteId) {
+                alert('Selecione um cliente para abrir a OS.');
+                return;
+            }
+
+            const linhas = document.querySelectorAll('.item-row');
+            const itens = [];
+            linhas.forEach(linha => {
+                const descricao = linha.querySelector('.item-desc').value;
+                const valor = linha.querySelector('.item-valor').value.replace(',', '.');
+                if (descricao && valor) {
+                    itens.push({ descricao, valor: parseFloat(valor).toFixed(2) });
+                }
+            });
+
+            if (itens.length === 0) {
+                alert('Adicione pelo menos um produto ou serviço.');
+                return;
+            }
+
+            const statusOSDiv = document.getElementById('statusOS');
+            statusOSDiv.style.color = '#17a2b8';
+            statusOSDiv.textContent = 'Gravando OS no sistema...';
+
+            try {
+                const res = await fetch(`${API_URL}/os`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clienteId, itens })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    statusOSDiv.style.color = '#2e7d32';
+                    statusOSDiv.textContent = ` OS #${data.numeroOS} aberta com sucesso!`;
+                    document.getElementById('formOS').reset();
+                    document.getElementById('listaItensContainer').innerHTML = '';
+                    adicionarLinhaItem();
+                    carregarOS();
+                    carregarFaturamento();
+                } else {
+                    statusOSDiv.style.color = '#d9534f';
+                    statusOSDiv.textContent = ' Erro: ' + (data.error || 'Não foi possível salvar.');
+                }
+            } catch (err) {
+                console.error(err);
+                statusOSDiv.style.color = '#d9534f';
+                statusOSDiv.textContent = ' Erro de conexão com o servidor local.';
+            }
+        });
+
+        async function carregarFaturamento() {
+            try {
+                const res = await fetch(`${API_URL}/faturamento`);
+                const dados = await res.json();
+                document.getElementById('fatHoje').textContent = formatarMoeda(dados.hoje);
+                document.getElementById('fatSemana').textContent = formatarMoeda(dados.semana);
+                document.getElementById('fatMes').textContent = formatarMoeda(dados.mes);
+            } catch (e) { console.error(e); }
+        }
+
+        async function carregarRelatorios() {
+            await carregarFaturamento();
+            try {
+                const res = await fetch(`${API_URL}/os`);
+                const dados = await res.json();
+                const tbody = document.getElementById('tabelaRelatorio');
+                tbody.innerHTML = '';
+
+                const concluidos = dados.filter(o => o.status === 'PRONTO' || o.status === 'ENTREGUE');
+
+                document.getElementById('relFatHoje').textContent = document.getElementById('fatHoje').textContent;
+                document.getElementById('relFatSemana').textContent = document.getElementById('fatSemana').textContent;
+                document.getElementById('relFatMes').textContent = document.getElementById('fatMes').textContent;
+
+                if (concluidos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Nenhum registro faturado encontrado.</td></tr>`;
+                    return;
+                }
+
+                concluidos.reverse().forEach(o => {
+                    let itensTxt = '';
+                    if(o.itens && Array.isArray(o.itens)) {
+                        itensTxt = o.itens.map(i => `${i.descricao} (R$ ${i.valor})`).join(', ');
+                    }
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><b>#${o.numeroOS}</b><br><small>${o.dataAbertura}</small></td>
+                            <td>${o.clienteNome} - <small>${o.aparelho}</small><br><span style="font-size:11px; color:#555;">${itensTxt}</span></td>
+                            <td>${o.pagamento || 'PIX'}</td>
+                            <td><b>R$ ${o.valor}</b></td>
+                        </tr>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+    </script>
+    <script src="dashboard.js?v=20261009-5"></script>
+</body>
+</html>
