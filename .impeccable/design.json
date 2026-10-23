@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T23:34:22.045Z",
+  "title": "Design System: Bruce Cell — estação de balcão",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "#12674f",
+        "tonalRamp": [
+          "oklch(15% 0.07 165)",
+          "oklch(27% 0.07 165)",
+          "oklch(38% 0.07 165)",
+          "oklch(50% 0.07 165)",
+          "oklch(62% 0.07 165)",
+          "oklch(74% 0.07 165)",
+          "oklch(86% 0.07 165)",
+          "oklch(95% 0.07 165)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "primary-hover",
+        "canonical": "#0b523f",
+        "tonalRamp": [
+          "oklch(15% 0.07 165)",
+          "oklch(27% 0.07 165)",
+          "oklch(38% 0.07 165)",
+          "oklch(50% 0.07 165)",
+          "oklch(62% 0.07 165)",
+          "oklch(74% 0.07 165)",
+          "oklch(86% 0.07 165)",
+          "oklch(95% 0.07 165)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "primary-soft",
+        "canonical": "#dff1e7",
+        "tonalRamp": [
+          "oklch(15% 0.03 155)",
+          "oklch(27% 0.03 155)",
+          "oklch(38% 0.03 155)",
+          "oklch(50% 0.03 155)",
+          "oklch(62% 0.03 155)",
+          "oklch(74% 0.03 155)",
+          "oklch(86% 0.03 155)",
+          "oklch(95% 0.03 155)"
+        ]
+      },
+      "navigation": {
+        "role": "primary",
+        "displayName": "navigation",
+        "canonical": "#213c31",
+        "tonalRamp": [
+          "oklch(15% 0.035 155)",
+          "oklch(27% 0.035 155)",
+          "oklch(38% 0.035 155)",
+          "oklch(50% 0.035 155)",
+          "oklch(62% 0.035 155)",
+          "oklch(74% 0.035 155)",
+          "oklch(86% 0.035 155)",
+          "oklch(95% 0.035 155)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "canvas",
+        "canonical": "#f3f5f2",
+        "tonalRamp": [
+          "oklch(15% 0.008 145)",
+          "oklch(27% 0.008 145)",
+          "oklch(38% 0.008 145)",
+          "oklch(50% 0.008 145)",
+          "oklch(62% 0.008 145)",
+          "oklch(74% 0.008 145)",
+          "oklch(86% 0.008 145)",
+          "oklch(95% 0.008 145)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "surface",
+        "canonical": "#fff",
+        "tonalRamp": [
+          "oklch(15% 0 145)",
+          "oklch(27% 0 145)",
+          "oklch(38% 0 145)",
+          "oklch(50% 0 145)",
+          "oklch(62% 0 145)",
+          "oklch(74% 0 145)",
+          "oklch(86% 0 145)",
+          "oklch(95% 0 145)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "soft",
+        "canonical": "#edf1ed",
+        "tonalRamp": [
+          "oklch(15% 0.01 145)",
+          "oklch(27% 0.01 145)",
+          "oklch(38% 0.01 145)",
+          "oklch(50% 0.01 145)",
+          "oklch(62% 0.01 145)",
+          "oklch(74% 0.01 145)",
+          "oklch(86% 0.01 145)",
+          "oklch(95% 0.01 145)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "ink",
+        "canonical": "#25362f",
+        "tonalRamp": [
+          "oklch(15% 0.02 155)",
+          "oklch(27% 0.02 155)",
+          "oklch(38% 0.02 155)",
+          "oklch(50% 0.02 155)",
+          "oklch(62% 0.02 155)",
+          "oklch(74% 0.02 155)",
+          "oklch(86% 0.02 155)",
+          "oklch(95% 0.02 155)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "canonical": "#63736b",
+        "tonalRamp": [
+          "oklch(15% 0.02 155)",
+          "oklch(27% 0.02 155)",
+          "oklch(38% 0.02 155)",
+          "oklch(50% 0.02 155)",
+          "oklch(62% 0.02 155)",
+          "oklch(74% 0.02 155)",
+          "oklch(86% 0.02 155)",
+          "oklch(95% 0.02 155)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "line",
+        "canonical": "#dce4dd",
+        "tonalRamp": [
+          "oklch(15% 0.012 145)",
+          "oklch(27% 0.012 145)",
+          "oklch(38% 0.012 145)",
+          "oklch(50% 0.012 145)",
+          "oklch(62% 0.012 145)",
+          "oklch(74% 0.012 145)",
+          "oklch(86% 0.012 145)",
+          "oklch(95% 0.012 145)"
+        ]
+      },
+      "financial": {
+        "role": "secondary",
+        "displayName": "financial",
+        "canonical": "#d8ecde",
+        "tonalRamp": [
+          "oklch(15% 0.04 145)",
+          "oklch(27% 0.04 145)",
+          "oklch(38% 0.04 145)",
+          "oklch(50% 0.04 145)",
+          "oklch(62% 0.04 145)",
+          "oklch(74% 0.04 145)",
+          "oklch(86% 0.04 145)",
+          "oklch(95% 0.04 145)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "warning",
+        "canonical": "#9b6a16",
+        "tonalRamp": [
+          "oklch(15% 0.08 75)",
+          "oklch(27% 0.08 75)",
+          "oklch(38% 0.08 75)",
+          "oklch(50% 0.08 75)",
+          "oklch(62% 0.08 75)",
+          "oklch(74% 0.08 75)",
+          "oklch(86% 0.08 75)",
+          "oklch(95% 0.08 75)"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "danger",
+        "canonical": "#b23d42",
+        "tonalRamp": [
+          "oklch(15% 0.1 20)",
+          "oklch(27% 0.1 20)",
+          "oklch(38% 0.1 20)",
+          "oklch(50% 0.1 20)",
+          "oklch(62% 0.1 20)",
+          "oklch(74% 0.1 20)",
+          "oklch(86% 0.1 20)",
+          "oklch(95% 0.1 20)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "Hierarquia principal compacta."
+      },
+      "metric": {
+        "displayName": "Indicador financeiro",
+        "purpose": "Numerais tabulares em faturamento e venda."
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu",
+        "value": "0 12px 32px #172f2422",
+        "purpose": "Menu de conta sobreposto."
+      },
+      {
+        "name": "product-hover",
+        "value": "0 5px 15px #0000000d",
+        "purpose": "Resposta de seleção do produto."
+      },
+      {
+        "name": "modal",
+        "value": "0 24px 80px #102a2044",
+        "purpose": "Diálogo sobre backdrop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": ".18s ease",
+        "purpose": "Fundo, borda e símbolos."
+      },
+      {
+        "name": "chart",
+        "value": ".25s ease-out",
+        "purpose": "Largura das barras."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Remove transições e animações quando solicitado."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "760px"
+      },
+      {
+        "name": "tablet",
+        "value": "1050px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1250px"
+      },
+      {
+        "name": "wide",
+        "value": "1700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ação principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação jade com foco visível.",
+      "html": "<button class=\"ds-primary\">Nova venda</button>",
+      "css": ".ds-primary{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;min-height:44px;padding:10px 17px;border:1px solid transparent;border-radius:9px;background:var(--jade,#12674f);color:#fff;font-weight:700;cursor:pointer;transition:background .18s ease}.ds-primary:hover{background:#0b523f}.ds-primary:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}"
+    },
+    {
+      "name": "Ação secundária",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação complementar com borda.",
+      "html": "<button class=\"ds-secondary\">Nova ordem de serviço</button>",
+      "css": ".ds-secondary{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;min-height:44px;padding:11px 18px;border:1px solid var(--border,#dce4dd);border-radius:8px;background:var(--surface,#fff);color:var(--text,#25362f);font-weight:700;cursor:pointer}.ds-secondary:hover{background:var(--soft,#edf1ed)}.ds-secondary:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Rótulo e busca de produto.",
+      "html": "<label class=\"ds-label\" for=\"ds-search\">Buscar produto</label><input id=\"ds-search\" class=\"ds-input\" placeholder=\"Nome do produto ou código\">",
+      "css": ".ds-label{display:block;font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;font-size:12px;font-weight:700;color:var(--text,#25362f);margin-bottom:7px}.ds-input{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;width:100%;min-height:46px;padding:11px 13px;box-sizing:border-box;border:1px solid var(--border,#dce4dd);border-radius:8px;background:var(--surface,#fff);color:var(--text,#25362f)}.ds-input:focus{border-color:var(--accent,#12674f)}.ds-input:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}"
+    },
+    {
+      "name": "Navegação",
+      "kind": "nav",
+      "description": "Destino selecionado sobre verde profundo.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav-active\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M3 3v18h18M7 15v3m5-9v9m5-13v13\"/></svg>Visão da loja</button><button>Ordens de serviço</button></nav>",
+      "css": ".ds-nav{padding:17px;background:#213c31;border-radius:9px;width:240px}.ds-nav button{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;display:flex;align-items:center;gap:12px;width:100%;min-height:47px;padding:12px 14px;border:0;border-radius:9px;background:transparent;color:#bfd1c6;font-weight:600;cursor:pointer}.ds-nav button:hover{background:#305242;color:#fff}.ds-nav .ds-nav-active{background:#d9efdf;color:#184b34;font-weight:800}.ds-nav svg{width:19px;height:19px}.ds-nav button:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}"
+    },
+    {
+      "name": "Estado da OS",
+      "kind": "chip",
+      "description": "Texto e tom semântico para aparelho pronto.",
+      "html": "<span class=\"ds-badge\">Pronto</span>",
+      "css": ".ds-badge{display:inline-block;font:700 11px var(--font,Manrope,'Segoe UI',sans-serif);border-radius:5px;padding:6px 9px;background:#dceee1;color:#24613c;white-space:nowrap}"
+    },
+    {
+      "name": "Indicador financeiro",
+      "kind": "card",
+      "description": "Primeiro indicador em menta financeira; valor apenas demonstrativo.",
+      "html": "<article class=\"ds-metric\"><h3>Faturamento hoje</h3><strong>R$ 0,00</strong><p>Nenhuma venda registrada</p></article>",
+      "css": ".ds-metric{padding:22px 24px;border-radius:14px;background:#d8ecde;color:#1e4f36;font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;}.ds-metric h3{font-size:12px;font-weight:600;color:#3e624b;margin:0 0 12px}.ds-metric strong{font-size:29px;line-height:1.2;letter-spacing:-.035em;font-weight:800;font-variant-numeric:tabular-nums}.ds-metric p{font-size:11px;color:#3e624b;margin:12px 0 0}"
+    },
+    {
+      "name": "Produto do catálogo",
+      "kind": "button",
+      "refersTo": "product",
+      "description": "Símbolo por categoria; exemplo de demonstração.",
+      "html": "<button class=\"ds-product\"><span class=\"ds-visual\"><svg viewBox=\"0 0 80 80\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><rect x=\"20\" y=\"8\" width=\"40\" height=\"64\" rx=\"8\"/><rect x=\"26\" y=\"14\" width=\"12\" height=\"16\" rx=\"3\"/><circle cx=\"32\" cy=\"20\" r=\"2\"/></svg></span><strong>Capa de proteção</strong><small>Exemplo de produto</small><span class=\"ds-price\">R$ 0,00</span></button>",
+      "css": ".ds-product{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;display:flex;flex-direction:column;width:180px;min-height:235px;padding:9px 9px 17px;border:1px solid var(--border,#dce4dd);border-radius:13px;background:var(--surface,#fff);color:var(--text,#25362f);text-align:left;cursor:pointer;transition:border-color .18s ease}.ds-product:hover{border-color:var(--accent,#12674f);box-shadow:0 5px 15px #0000000d}.ds-product:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}.ds-visual{display:grid;place-items:center;height:110px;margin-bottom:13px;background:#e8ebf1;color:#65738b;border-radius:8px}.ds-visual svg{width:73px;height:73px;transition:transform .18s ease}.ds-product:active svg{transform:scale(.94)}.ds-product strong{font-size:12px;padding:0 5px;line-height:1.6}.ds-product small{font-size:11px;margin:5px 5px 15px;color:var(--muted,#63736b)}.ds-price{margin:auto 5px 0;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Comprovante",
+      "kind": "custom",
+      "refersTo": "receipt",
+      "description": "Superfície de venda, total e ação de fechamento.",
+      "html": "<section class=\"ds-receipt\"><h2>Venda atual</h2><p>Seu carrinho está vazio</p><div class=\"ds-total\"><span>Total</span><strong>R$ 0,00</strong></div><button disabled>Finalizar venda</button></section>",
+      "css": ".ds-receipt{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;padding:22px;border:1px solid var(--border,#dce4dd);border-radius:15px;background:var(--surface,#fff);color:var(--text,#25362f);width:300px}.ds-receipt h2{font-size:20px;margin:0;padding-bottom:21px;border-bottom:1px dashed var(--border,#dce4dd)}.ds-receipt p{padding:22px 0;text-align:center;color:var(--muted,#63736b);font-size:12px}.ds-total{display:flex;align-items:center;justify-content:space-between;background:#e5f0e8;color:#214c36;padding:20px 17px;border-radius:10px;margin:22px 0}.ds-total span{font-size:11px}.ds-total strong{font-size:29px;font-weight:800;font-variant-numeric:tabular-nums}.ds-receipt button{font-family:var(--font,Manrope,'Segoe UI',sans-serif);font-size:13px;width:100%;min-height:53px;border:0;border-radius:9px;background:#12674f;color:#fff;font-weight:700;opacity:.5}.ds-receipt button:focus-visible{outline:3px solid var(--accent,#12674f);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Estação de balcão",
+    "overview": "Uma interface para o ritmo da loja de celulares: vender, acompanhar reparos e consultar o negócio. A navegação verde profunda enquadra superfícies claras; jade identifica ações, enquanto símbolos de acessórios e estados trazem cor com função.\n\nEste registro descreve a implementação atual, sem presumir aprovação visual do usuário. A revisão azul anterior foi rejeitada. A identidade atual alcança operação, login, conta, integrações e central de empresas.",
+    "keyCharacteristics": [
+      "Navegação verde profunda e superfícies claras.",
+      "Manrope local e valores financeiros tabulares.",
+      "Símbolos geométricos por tipo de acessório.",
+      "Venda como comprovante e gestão com filas reais.",
+      "Tema escuro e vistas adaptadas ao celular."
+    ],
+    "rules": [
+      {
+        "name": "Cor com função",
+        "body": "Cor acompanha rótulos e valores; gráficos não dependem somente da diferença entre tons.",
+        "section": "colors"
+      },
+      {
+        "name": "Dinheiro legível",
+        "body": "Valores financeiros e contagens usam numerais tabulares, com peso e alinhamento estáveis.",
+        "section": "typography"
+      },
+      {
+        "name": "Elevação de sobreposição",
+        "body": "Não transferir sombras de menus e diálogos aos painéis de dados.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do aplicar a mesma identidade a operação, autenticação, conta, integrações e central.",
+      "Do acompanhar gráficos e estados com texto e valores reais.",
+      "Do manter foco visível, movimento reduzido e acesso direto à venda no celular.",
+      "Do identificar capturas com fixtures como demonstrações, sem tratá-las como produção."
+    ],
+    "donts": [
+      "Don't recuperar a identidade azul rejeitada ou o cobre antigo como variantes atuais.",
+      "Don't inventar faturamento, séries históricas ou clientes para preencher indicadores.",
+      "Don't propagar sombras de sobreposição para todos os painéis.",
+      "Don't alterar regras de autenticação, estoque, pagamento ou impressão ao ampliar o visual."
+    ]
+  }
+}

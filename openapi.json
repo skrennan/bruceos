@@ -1,0 +1,33 @@
+{
+  "openapi":"3.0.3",
+  "info":{"title":"API de WhatsApp por empresa","version":"1.0.0","description":"API autenticada por chave exclusiva da empresa. Conexão via whatsapp-web.js; não é a API oficial da Meta. Envio síncrono, sem confirmação de entrega ao destinatário. O telefone deve ser conectado no painel antes de enviar."},
+  "servers":[{"url":"/v1"}],
+  "security":[{"companyKey":[]}],
+  "paths":{
+    "/account":{"get":{"summary":"Consultar empresa, plano e consumo","responses":{"200":{"description":"Empresa e assinatura","content":{"application/json":{"schema":{"type":"object","properties":{"company":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"}}},"subscription":{"$ref":"#/components/schemas/Subscription"}}}}}},"401":{"$ref":"#/components/responses/Unauthorized"},"402":{"$ref":"#/components/responses/Expired"},"429":{"$ref":"#/components/responses/Limited"}}}},
+    "/whatsapp/status":{"get":{"summary":"Consultar conexão da empresa sem expor QR Code","responses":{"200":{"description":"Estado da conexão","content":{"application/json":{"schema":{"type":"object","properties":{"status":{"type":"string","enum":["DESCONECTADO","INICIALIZANDO","AGUARDANDO_LEITURA","AUTENTICADO","CONECTADO","ERRO_AUTENTICACAO","ERRO_INICIALIZACAO"]}}}}}},"401":{"$ref":"#/components/responses/Unauthorized"},"402":{"$ref":"#/components/responses/Expired"},"429":{"$ref":"#/components/responses/Limited"}}}},
+    "/messages":{
+      "get":{"summary":"Consultar os 30 envios mais recentes da empresa","responses":{"200":{"description":"Metadados sem telefone e sem texto da mensagem","content":{"application/json":{"schema":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["sending","sent","unknown"]},"createdAt":{"type":"string","format":"date-time"}}}}}}},"401":{"$ref":"#/components/responses/Unauthorized"},"402":{"$ref":"#/components/responses/Expired"},"429":{"$ref":"#/components/responses/Limited"}}},
+      "post":{
+        "summary":"Enviar mensagem de texto pelo WhatsApp da empresa",
+        "description":"Envios novos consomem a franquia do mês em UTC. Tentativas sem confirmação também consomem franquia. Não envie mensagens novamente com um novo identificador sem conferir o WhatsApp após um erro de confirmação. A repetição da mesma chave e corpo devolve o registro já confirmado, sem enviar outra vez. O status sent indica conclusão da chamada ao WhatsApp Web, não leitura ou entrega ao destinatário.",
+        "parameters":[{"in":"header","name":"Idempotency-Key","required":true,"schema":{"type":"string","minLength":8,"maxLength":128,"pattern":"^[a-zA-Z0-9_.:-]{8,128}$"},"description":"Identificador único da mensagem dentro da empresa; conserve-o para repetir a mesma requisição."}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["to","text"],"properties":{"to":{"type":"string","description":"Telefone com DDI e DDD; números brasileiros de 10 ou 11 dígitos recebem DDI 55.","example":"5511999999999"},"text":{"type":"string","minLength":1,"maxLength":10000,"example":"Olá! Seu pedido está pronto."}}}}}},
+        "responses":{"201":{"description":"Envio concluído no WhatsApp Web","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SendResult"}}}},"200":{"description":"Repetição de um envio já confirmado, sem novo consumo","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SendResult"}}}},"400":{"description":"Mensagem ou Idempotency-Key inválida","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}},"401":{"$ref":"#/components/responses/Unauthorized"},"402":{"$ref":"#/components/responses/Expired"},"409":{"description":"WhatsApp desconectado, envio em andamento/sem confirmação ou chave usada com outro conteúdo","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}},"429":{"$ref":"#/components/responses/Limited"},"502":{"description":"Envio sem confirmação. Confira o WhatsApp antes de repetir com outra identificação.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}}
+      }
+    }
+  },
+  "components":{
+    "securitySchemes":{"companyKey":{"type":"http","scheme":"bearer","description":"Gere a chave em API e plano. Nunca publique a chave no frontend. As chaves não dão acesso à administração nem às rotas de clientes, OS ou estoque."}},
+    "schemas":{
+      "SendResult":{"type":"object","properties":{"success":{"type":"boolean"},"id":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["sent"]},"replayed":{"type":"boolean"}}},
+      "Subscription":{"type":"object","properties":{"storeId":{"type":"string"},"plan":{"type":"string"},"monthlyPriceCents":{"type":"integer","minimum":0},"messageLimit":{"type":"integer","minimum":1},"used":{"type":"integer","minimum":0},"period":{"type":"string","example":"2026-10"},"expiresAt":{"type":"string","format":"date-time","nullable":true},"billingStatus":{"type":"string","enum":["trial","active"]},"active":{"type":"integer","enum":[0,1]},"access":{"type":"boolean"}}},
+      "Error":{"type":"object","properties":{"error":{"type":"string"},"code":{"type":"string"}}}
+    },
+    "responses":{
+      "Unauthorized":{"description":"Chave inválida/revogada ou empresa suspensa","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}},
+      "Expired":{"description":"Acesso vencido. Solicite renovação ao administrador.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}},
+      "Limited":{"description":"Franquia mensal esgotada ou 60 requisições/minuto por empresa. Retry-After é retornado no limite por minuto.","headers":{"Retry-After":{"schema":{"type":"integer"},"description":"Segundos até liberar requisições novamente, quando aplicável."}},"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}
+    }
+  }
+}

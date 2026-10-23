@@ -1,0 +1,24 @@
+node_modules/
+data/
+*.db
+*.db-*
+.wwebjs_auth/
+.wwebjs_cache/
+*.sqlite
+*.sqlite-*
+.env
+/clientes.json
+/os.json
+/orcamentos.json
+.taste-skill/
+
+# Local configuration, credentials and generated runtime artifacts
+.env.*
+!.env.example
+.npm-cache/
+*.log
+*.pem
+*.key
+.impeccable/*
+!.impeccable/design.json
+!.impeccable/surfaces/
